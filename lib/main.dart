@@ -31,6 +31,7 @@ void main() async {
   Get.put(AuthController());
   Get.put(BusinessSettingsController());
   Get.put(AppearanceController());
+  Get.put(PrinterService());
   Get.put(ImageStorageService());
   Get.put(PriceTagDesignerController());
   Get.put(PrinterController());

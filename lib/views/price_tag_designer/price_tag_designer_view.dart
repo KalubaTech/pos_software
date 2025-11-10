@@ -184,7 +184,9 @@ class PriceTagDesignerView extends StatelessWidget {
                       // Toolbar
                       ToolbarWidget(),
                       // Canvas
-                      Expanded(child: CanvasWidget()),
+                      Expanded(
+                          child: CanvasWidget()
+                      ),
                     ],
                   ),
                 ),

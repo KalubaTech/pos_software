@@ -110,6 +110,7 @@ class CanvasWidget extends StatelessWidget {
       height: canvasHeight,
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),

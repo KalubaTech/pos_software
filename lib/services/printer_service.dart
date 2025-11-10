@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import '../models/receipt_model.dart';
@@ -13,11 +14,101 @@ class PrinterService extends GetxController {
   var availablePrinters = <BluetoothInfo>[].obs;
   var connectedPrinter = Rx<BluetoothInfo?>(null);
   var savedPrinterMac = ''.obs;
+  final _storage = GetStorage();
+
+  // Connection stability tracking
+  var connectionAttempts = 0;
+  var lastConnectionCheck = DateTime.now();
+  bool _isReconnecting = false;
 
   @override
   void onInit() {
     super.onInit();
+    _loadSavedPrinter();
     _checkConnectionStatus();
+    _startConnectionMonitor();
+  }
+
+  @override
+  void onClose() {
+    _stopConnectionMonitor();
+    super.onClose();
+  }
+
+  // Monitor connection status periodically
+  void _startConnectionMonitor() {
+    // Check connection every 5 seconds
+    Future.delayed(Duration(seconds: 5), () async {
+      if (!Get.isRegistered<PrinterService>()) return;
+
+      await _monitorConnection();
+      _startConnectionMonitor(); // Schedule next check
+    });
+  }
+
+  void _stopConnectionMonitor() {
+    // Cleanup if needed
+  }
+
+  // Monitor and maintain connection
+  Future<void> _monitorConnection() async {
+    try {
+      // Skip if already reconnecting
+      if (_isReconnecting) return;
+
+      // Check current status
+      final status = await PrintBluetoothThermal.connectionStatus;
+      final wasConnected = isConnected.value;
+      isConnected.value = status;
+
+      // If we lost connection and have a saved printer, try to reconnect
+      if (!status && wasConnected && savedPrinterMac.value.isNotEmpty) {
+        print('Connection lost. Attempting to reconnect...');
+        await _attemptReconnect();
+      }
+    } catch (e) {
+      print('Error in connection monitor: $e');
+    }
+  }
+
+  // Attempt to reconnect with exponential backoff
+  Future<void> _attemptReconnect() async {
+    if (_isReconnecting) return;
+
+    _isReconnecting = true;
+    try {
+      // Wait a bit before reconnecting
+      await Future.delayed(Duration(milliseconds: 500));
+
+      final success = await connectPrinter(savedPrinterMac.value, silent: true);
+
+      if (success) {
+        print('Reconnection successful');
+        connectionAttempts = 0;
+      } else {
+        connectionAttempts++;
+        print('Reconnection failed. Attempts: $connectionAttempts');
+      }
+    } catch (e) {
+      print('Error during reconnection: $e');
+      connectionAttempts++;
+    } finally {
+      _isReconnecting = false;
+    }
+  }
+
+  // Load saved printer MAC from storage
+  void _loadSavedPrinter() {
+    final savedMac = _storage.read('saved_printer_mac');
+    if (savedMac != null && savedMac.isNotEmpty) {
+      savedPrinterMac.value = savedMac;
+    }
+  }
+
+  // Save printer MAC to storage (public method)
+  void savePrinterMac(String macAddress) {
+    _storage.write('saved_printer_mac', macAddress);
+    savedPrinterMac.value = macAddress;
   }
 
   Future<void> _checkConnectionStatus() async {
@@ -29,13 +120,26 @@ class PrinterService extends GetxController {
     }
   }
 
-  // List paired Bluetooth printers
+  // List paired Bluetooth printers (without auto-reconnection)
   Future<List<BluetoothInfo>> listBluetoothPrinters() async {
     try {
       isScanning.value = true;
       final List<BluetoothInfo> listResult =
           await PrintBluetoothThermal.pairedBluetooths;
       availablePrinters.value = listResult;
+
+      // Just set the saved printer as connectedPrinter if found (don't auto-connect)
+      if (savedPrinterMac.value.isNotEmpty) {
+        final savedPrinter = listResult.firstWhereOrNull(
+          (p) => p.macAdress == savedPrinterMac.value,
+        );
+        if (savedPrinter != null) {
+          connectedPrinter.value = savedPrinter;
+          // Check connection status without triggering reconnection
+          await connectionStatus();
+        }
+      }
+
       return listResult;
     } catch (e) {
       print('Error listing Bluetooth printers: $e');
@@ -58,17 +162,40 @@ class PrinterService extends GetxController {
     }
   }
 
-  // Connect to printer
-  Future<bool> connectPrinter(String macAddress) async {
+  // Connect to printer with retry logic
+  Future<bool> connectPrinter(String macAddress, {bool silent = false}) async {
     try {
-      print('Connecting to printer: $macAddress');
-      final bool result = await PrintBluetoothThermal.connect(
-        macPrinterAddress: macAddress,
-      );
+      if (!silent) {
+        print('Connecting to printer: $macAddress');
+      }
+
+      // Disconnect first if already connected to avoid conflicts
+      try {
+        final currentStatus = await PrintBluetoothThermal.connectionStatus;
+        if (currentStatus) {
+          await PrintBluetoothThermal.disconnect;
+          await Future.delayed(Duration(milliseconds: 500));
+        }
+      } catch (e) {
+        print('Error during disconnect before connect: $e');
+      }
+
+      // Attempt connection with timeout
+      final bool result =
+          await PrintBluetoothThermal.connect(
+            macPrinterAddress: macAddress,
+          ).timeout(
+            Duration(seconds: 10),
+            onTimeout: () {
+              print('Connection timeout');
+              return false;
+            },
+          );
 
       if (result) {
         isConnected.value = true;
-        savedPrinterMac.value = macAddress;
+        connectionAttempts = 0;
+        savePrinterMac(macAddress); // Save to storage
 
         // Find and set connected printer
         final printer = availablePrinters.firstWhereOrNull(
@@ -76,15 +203,40 @@ class PrinterService extends GetxController {
         );
         connectedPrinter.value = printer;
 
-        Get.snackbar('Success', 'Connected to printer');
+        if (!silent) {
+          Get.snackbar(
+            'Success',
+            'Connected to printer',
+            snackPosition: SnackPosition.BOTTOM,
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        }
       } else {
-        Get.snackbar('Error', 'Failed to connect to printer');
+        if (!silent) {
+          Get.snackbar(
+            'Error',
+            'Failed to connect to printer',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+          );
+        }
       }
 
       return result;
     } catch (e) {
       print('Error connecting to printer: $e');
-      Get.snackbar('Error', 'Failed to connect: $e');
+      if (!silent) {
+        Get.snackbar(
+          'Error',
+          'Failed to connect: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
       return false;
     }
   }
@@ -98,6 +250,58 @@ class PrinterService extends GetxController {
       Get.snackbar('Success', 'Disconnected from printer');
     } catch (e) {
       print('Error disconnecting: $e');
+    }
+  }
+
+  // Ensure printer is connected before operation
+  Future<bool> ensureConnection({int maxRetries = 3}) async {
+    try {
+      // Check if we have a saved printer
+      if (savedPrinterMac.value.isEmpty) {
+        print('No saved printer to connect to');
+        return false;
+      }
+
+      // Check current connection status
+      final status = await connectionStatus();
+      if (status) {
+        print('Already connected');
+        return true;
+      }
+
+      // Try to reconnect with retries
+      for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        print('Connection attempt $attempt of $maxRetries');
+
+        final success = await connectPrinter(
+          savedPrinterMac.value,
+          silent:
+              attempt < maxRetries, // Only show notification on last attempt
+        );
+
+        if (success) {
+          // Verify connection
+          await Future.delayed(Duration(milliseconds: 500));
+          final verified = await connectionStatus();
+          if (verified) {
+            print('Connection verified');
+            return true;
+          }
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          final waitTime = Duration(milliseconds: 500 * attempt);
+          print('Waiting ${waitTime.inMilliseconds}ms before retry...');
+          await Future.delayed(waitTime);
+        }
+      }
+
+      print('Failed to establish connection after $maxRetries attempts');
+      return false;
+    } catch (e) {
+      print('Error ensuring connection: $e');
+      return false;
     }
   }
 
