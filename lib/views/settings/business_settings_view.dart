@@ -485,11 +485,15 @@ class BusinessSettingsView extends StatelessWidget {
                       items: [
                         DropdownMenuItem(
                           value: 'before',
-                          child: Text('Before (\$100)'),
+                          child: Text(
+                            'Before (${controller.currencySymbol.value}100)',
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'after',
-                          child: Text('After (100\$)'),
+                          child: Text(
+                            'After (100${controller.currencySymbol.value})',
+                          ),
                         ),
                       ],
                       onChanged: (value) =>
@@ -606,6 +610,169 @@ class BusinessSettingsView extends StatelessWidget {
                 title: Text('Show Tax Breakdown'),
                 subtitle: Text('Display tax details separately'),
                 secondary: Icon(Iconsax.receipt_discount),
+              ),
+            ),
+            SizedBox(height: 24),
+            Divider(),
+            SizedBox(height: 16),
+            // Receipt Printer Configuration
+            Row(
+              children: [
+                Icon(Iconsax.printer, color: AppColors.primary, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Receipt Printer Configuration',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Obx(
+              () => TextField(
+                controller:
+                    TextEditingController(
+                        text: controller.receiptPrinterName.value,
+                      )
+                      ..selection = TextSelection.collapsed(
+                        offset: controller.receiptPrinterName.value.length,
+                      ),
+                onChanged: (value) =>
+                    controller.receiptPrinterName.value = value,
+                decoration: InputDecoration(
+                  labelText: 'Printer Name',
+                  hintText: 'e.g., Cashier Printer 1',
+                  prefixIcon: Icon(Iconsax.printer),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            Obx(
+              () => DropdownButtonFormField<String>(
+                value: controller.receiptPrinterType.value,
+                decoration: InputDecoration(
+                  labelText: 'Connection Type',
+                  prefixIcon: Icon(Iconsax.link),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                items: ['USB', 'Network', 'Bluetooth']
+                    .map(
+                      (type) =>
+                          DropdownMenuItem(value: type, child: Text(type)),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    controller.receiptPrinterType.value = value;
+                  }
+                },
+              ),
+            ),
+            SizedBox(height: 16),
+            Obx(
+              () => controller.receiptPrinterType.value == 'Network'
+                  ? Column(
+                      children: [
+                        TextField(
+                          controller:
+                              TextEditingController(
+                                  text: controller.receiptPrinterAddress.value,
+                                )
+                                ..selection = TextSelection.collapsed(
+                                  offset: controller
+                                      .receiptPrinterAddress
+                                      .value
+                                      .length,
+                                ),
+                          onChanged: (value) =>
+                              controller.receiptPrinterAddress.value = value,
+                          decoration: InputDecoration(
+                            labelText: 'IP Address',
+                            hintText: 'e.g., 192.168.1.100',
+                            prefixIcon: Icon(Iconsax.global),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        TextField(
+                          controller:
+                              TextEditingController(
+                                  text: controller.receiptPrinterPort.value,
+                                )
+                                ..selection = TextSelection.collapsed(
+                                  offset: controller
+                                      .receiptPrinterPort
+                                      .value
+                                      .length,
+                                ),
+                          onChanged: (value) =>
+                              controller.receiptPrinterPort.value = value,
+                          decoration: InputDecoration(
+                            labelText: 'Port',
+                            hintText: 'e.g., 9100',
+                            prefixIcon: Icon(Iconsax.link_21),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                        SizedBox(height: 16),
+                      ],
+                    )
+                  : controller.receiptPrinterType.value == 'Bluetooth'
+                  ? Column(
+                      children: [
+                        TextField(
+                          controller:
+                              TextEditingController(
+                                  text: controller.receiptPrinterAddress.value,
+                                )
+                                ..selection = TextSelection.collapsed(
+                                  offset: controller
+                                      .receiptPrinterAddress
+                                      .value
+                                      .length,
+                                ),
+                          onChanged: (value) =>
+                              controller.receiptPrinterAddress.value = value,
+                          decoration: InputDecoration(
+                            labelText: 'Bluetooth Address',
+                            hintText: 'e.g., 00:11:22:33:44:55',
+                            prefixIcon: Icon(Iconsax.bluetooth),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                      ],
+                    )
+                  : SizedBox.shrink(),
+            ),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Iconsax.info_circle, color: AppColors.primary, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Note: This is for transaction receipt printing. For price tag/label printing, use the printer management in the Price Tag Designer.',
+                      style: TextStyle(fontSize: 12, color: AppColors.primary),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

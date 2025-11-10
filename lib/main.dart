@@ -9,13 +9,15 @@ import 'controllers/navigations_controller.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/business_settings_controller.dart';
 import 'controllers/appearance_controller.dart';
+import 'controllers/price_tag_designer_controller.dart';
+import 'controllers/product_controller.dart';
+import 'controllers/printer_controller.dart';
 import 'services/printer_service.dart';
 import 'services/barcode_scanner_service.dart';
 import 'services/image_storage_service.dart';
 import 'services/database_service.dart';
 import 'views/auth/login_view.dart';
 import 'package:get/get.dart';
-import 'utils/colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,14 +26,16 @@ void main() async {
   // Initialize DatabaseService first
   final dbService = Get.put(DatabaseService());
   await dbService.database; // Ensure database is initialized
-
+  Get.put(ProductController());
   Get.put(NavigationsController());
   Get.put(AuthController());
   Get.put(BusinessSettingsController());
   Get.put(AppearanceController());
   Get.put(ImageStorageService());
+  Get.put(PriceTagDesignerController());
+  Get.put(PrinterController());
 
-  // Only initialize PrinterService on mobile platforms (flutter_blue_plus doesn't support Windows/macOS/Linux)
+  // Only initialize PrinterService on mobile platforms (print_bluetooth_thermal only supports Android/iOS)
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     Get.put(PrinterService());
   }

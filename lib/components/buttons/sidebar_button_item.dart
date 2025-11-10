@@ -33,8 +33,8 @@ class SidebarButtonItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: LayoutBuilder(builder: (context, constraints) {
             // Reserve space for icon + padding, compute max width for the title
-            const iconAreaWidth = 24.0; // icon size
-            const gapWidth = 16.0; // sized box between icon and title
+            const iconAreaWidth = 23.0; // icon size
+            const gapWidth = 4.0; // sized box between icon and title
             final availableForTitle = (constraints.maxWidth - iconAreaWidth - gapWidth - 32.0).clamp(0.0, double.infinity);
 
             // When collapsed, titleWidth is zero; when expanded use available width.

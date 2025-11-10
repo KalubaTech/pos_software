@@ -22,8 +22,15 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
   final double expandedWidth = 230.0;
   final double collapsedWidth = 60.0;
 
-  final List<String> menuItems = ['Dashboard', 'Transactions', 'Customers', 'Inventory', 'Reports', 'Settings'];
-
+  final List<String> menuItems = [
+    'Dashboard',
+    'Transactions',
+    'Customers',
+    'Inventory',
+    'Reports',
+    'Price Tags',
+    'Settings',
+  ];
 
   NavigationsController _navigationsController = Get.find();
 
@@ -49,14 +56,21 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
       child: Material(
         type: MaterialType.transparency,
         child: Column(
-          crossAxisAlignment: _showTitles ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          crossAxisAlignment: _showTitles
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
           children: [
             Padding(
-              padding: EdgeInsets.only(top: 20.0, left: _showTitles ? 24.0 : 0, bottom: 20.0),
+              padding: EdgeInsets.only(
+                top: 20.0,
+                left: _showTitles ? 24.0 : 0,
+                bottom: 20.0,
+              ),
               child: _showTitles
                   ? Text(
                       '${Constants.appName}',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -91,7 +105,11 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
                 Padding(
                   padding: const EdgeInsets.all(10.0),
                   child: IconButton(
-                    icon: Icon(_isWidthExpanded ? Iconsax.arrow_left_2 : Iconsax.arrow_right_3),
+                    icon: Icon(
+                      _isWidthExpanded
+                          ? Iconsax.arrow_left_2
+                          : Iconsax.arrow_right_3,
+                    ),
                     onPressed: _toggleTitles,
                     tooltip: _isWidthExpanded ? 'Collapse Menu' : 'Expand Menu',
                   ),
@@ -117,6 +135,8 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
         return Iconsax.box;
       case 'Reports':
         return Iconsax.chart_21;
+      case 'Price Tags':
+        return Iconsax.tag;
       case 'Settings':
         return Iconsax.setting_2;
       default:

@@ -30,6 +30,13 @@ class BusinessSettingsController extends GetxController {
   final showTaxBreakdown = true.obs;
   final receiptWidth = 80.obs; // 80mm or 58mm
 
+  // Receipt Printer Settings
+  final receiptPrinterName = ''.obs;
+  final receiptPrinterType = 'USB'.obs; // USB, Network, Bluetooth
+  final receiptPrinterAddress =
+      ''.obs; // IP address for network, device address for Bluetooth
+  final receiptPrinterPort = '9100'.obs; // Port for network printers
+
   // Operating Hours
   final openingTime = '09:00'.obs;
   final closingTime = '21:00'.obs;
@@ -74,6 +81,13 @@ class BusinessSettingsController extends GetxController {
     showTaxBreakdown.value = _storage.read('show_tax_breakdown') ?? true;
     receiptWidth.value = _storage.read('receipt_width') ?? 80;
 
+    // Load Receipt Printer Settings
+    receiptPrinterName.value = _storage.read('receipt_printer_name') ?? '';
+    receiptPrinterType.value = _storage.read('receipt_printer_type') ?? 'USB';
+    receiptPrinterAddress.value =
+        _storage.read('receipt_printer_address') ?? '';
+    receiptPrinterPort.value = _storage.read('receipt_printer_port') ?? '9100';
+
     // Load Operating Hours
     openingTime.value = _storage.read('opening_time') ?? '09:00';
     closingTime.value = _storage.read('closing_time') ?? '21:00';
@@ -115,6 +129,15 @@ class BusinessSettingsController extends GetxController {
     await _storage.write('show_tax_breakdown', showTaxBreakdown.value);
     await _storage.write('receipt_width', receiptWidth.value);
 
+    // Save Receipt Printer Settings
+    await _storage.write('receipt_printer_name', receiptPrinterName.value);
+    await _storage.write('receipt_printer_type', receiptPrinterType.value);
+    await _storage.write(
+      'receipt_printer_address',
+      receiptPrinterAddress.value,
+    );
+    await _storage.write('receipt_printer_port', receiptPrinterPort.value);
+
     // Save Operating Hours
     await _storage.write('opening_time', openingTime.value);
     await _storage.write('closing_time', closingTime.value);
@@ -151,6 +174,10 @@ class BusinessSettingsController extends GetxController {
     showLogo.value = true;
     showTaxBreakdown.value = true;
     receiptWidth.value = 80;
+    receiptPrinterName.value = '';
+    receiptPrinterType.value = 'USB';
+    receiptPrinterAddress.value = '';
+    receiptPrinterPort.value = '9100';
     openingTime.value = '09:00';
     closingTime.value = '21:00';
     operatingDays.value = [

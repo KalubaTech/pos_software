@@ -1,351 +1,749 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'dart:io' show Platform;
+import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import '../models/receipt_model.dart';
 import '../utils/currency_formatter.dart';
+import '../controllers/business_settings_controller.dart';
 import 'package:intl/intl.dart';
 
 class PrinterService extends GetxController {
-  var connectedPrinter = Rx<BluetoothDevice?>(null);
   var isConnected = false.obs;
   var isScanning = false.obs;
-  var availablePrinters = <BluetoothDevice>[].obs;
-
-  BluetoothCharacteristic? _writeCharacteristic;
-
-  // ESC/POS Commands
-  static const ESC = 0x1B;
-  static const GS = 0x1D;
-
-  // Initialize
-  static const INIT = [ESC, 0x40];
-
-  // Text alignment
-  static const ALIGN_LEFT = [ESC, 0x61, 0x00];
-  static const ALIGN_CENTER = [ESC, 0x61, 0x01];
-  static const ALIGN_RIGHT = [ESC, 0x61, 0x02];
-
-  // Text size
-  static const NORMAL = [ESC, 0x21, 0x00];
-  static const DOUBLE_HEIGHT = [ESC, 0x21, 0x10];
-  static const DOUBLE_WIDTH = [ESC, 0x21, 0x20];
-  static const DOUBLE_SIZE = [ESC, 0x21, 0x30];
-
-  // Text style
-  static const BOLD_ON = [ESC, 0x45, 0x01];
-  static const BOLD_OFF = [ESC, 0x45, 0x00];
-  static const UNDERLINE_ON = [ESC, 0x2D, 0x01];
-  static const UNDERLINE_OFF = [ESC, 0x2D, 0x00];
-
-  // Feed
-  static const LINE_FEED = [0x0A];
-  static const CUT_PAPER = [GS, 0x56, 0x00];
+  var availablePrinters = <BluetoothInfo>[].obs;
+  var connectedPrinter = Rx<BluetoothInfo?>(null);
+  var savedPrinterMac = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
-    _checkBluetoothState();
+    _checkConnectionStatus();
   }
 
-  Future<void> _checkBluetoothState() async {
+  Future<void> _checkConnectionStatus() async {
     try {
-      // isAvailable deprecated -> use isSupported
-      final supported = await FlutterBluePlus.isSupported;
-      if (!supported) {
-        Get.snackbar('Bluetooth', 'Bluetooth not supported on this device');
-      }
+      final status = await PrintBluetoothThermal.connectionStatus;
+      isConnected.value = status;
     } catch (e) {
-      print('Bluetooth check error: $e');
+      print('Error checking connection status: $e');
     }
   }
 
-  Future<void> scanForPrinters() async {
+  // List paired Bluetooth printers
+  Future<List<BluetoothInfo>> listBluetoothPrinters() async {
     try {
       isScanning.value = true;
-      availablePrinters.clear();
-
-      // Check if Bluetooth is on
-      final adapterState = await FlutterBluePlus.adapterState.first;
-      if (adapterState != BluetoothAdapterState.on) {
-        Get.snackbar('Bluetooth', 'Please turn on Bluetooth');
-        isScanning.value = false;
-        return;
-      }
-
-      // Start scanning
-      await FlutterBluePlus.startScan(timeout: Duration(seconds: 10));
-
-      // Listen to scan results
-      FlutterBluePlus.scanResults.listen((results) {
-        for (var result in results) {
-          if (result.device.platformName.isNotEmpty &&
-              !availablePrinters.any(
-                (d) => d.remoteId == result.device.remoteId,
-              )) {
-            availablePrinters.add(result.device);
-          }
-        }
-      });
-
-      await Future.delayed(Duration(seconds: 10));
-      await FlutterBluePlus.stopScan();
-
-      isScanning.value = false;
-
-      if (availablePrinters.isEmpty) {
-        Get.snackbar('No Printers', 'No Bluetooth printers found');
-      }
+      final List<BluetoothInfo> listResult =
+          await PrintBluetoothThermal.pairedBluetooths;
+      availablePrinters.value = listResult;
+      return listResult;
     } catch (e) {
+      print('Error listing Bluetooth printers: $e');
+      Get.snackbar('Error', 'Failed to list printers: $e');
+      return [];
+    } finally {
       isScanning.value = false;
-      Get.snackbar('Scan Error', 'Failed to scan: $e');
     }
   }
 
-  Future<bool> connectToPrinter(BluetoothDevice device) async {
+  // Get connection status
+  Future<bool> connectionStatus() async {
     try {
-      await device.connect(timeout: Duration(seconds: 10));
-
-      // Discover services
-      List<BluetoothService> services = await device.discoverServices();
-
-      // Find write characteristic (common UUID for printers)
-      for (var service in services) {
-        for (var characteristic in service.characteristics) {
-          if (characteristic.properties.write) {
-            _writeCharacteristic = characteristic;
-            break;
-          }
-        }
-        if (_writeCharacteristic != null) break;
-      }
-
-      if (_writeCharacteristic == null) {
-        await device.disconnect();
-        Get.snackbar('Connection Failed', 'No write characteristic found');
-        return false;
-      }
-
-      connectedPrinter.value = device;
-      isConnected.value = true;
-
-      Get.snackbar('Connected', 'Printer connected successfully');
-      return true;
+      final bool status = await PrintBluetoothThermal.connectionStatus;
+      isConnected.value = status;
+      return status;
     } catch (e) {
-      Get.snackbar('Connection Error', 'Failed to connect: $e');
+      print('Error getting connection status: $e');
       return false;
     }
   }
 
+  // Connect to printer
+  Future<bool> connectPrinter(String macAddress) async {
+    try {
+      print('Connecting to printer: $macAddress');
+      final bool result = await PrintBluetoothThermal.connect(
+        macPrinterAddress: macAddress,
+      );
+
+      if (result) {
+        isConnected.value = true;
+        savedPrinterMac.value = macAddress;
+
+        // Find and set connected printer
+        final printer = availablePrinters.firstWhereOrNull(
+          (p) => p.macAdress == macAddress,
+        );
+        connectedPrinter.value = printer;
+
+        Get.snackbar('Success', 'Connected to printer');
+      } else {
+        Get.snackbar('Error', 'Failed to connect to printer');
+      }
+
+      return result;
+    } catch (e) {
+      print('Error connecting to printer: $e');
+      Get.snackbar('Error', 'Failed to connect: $e');
+      return false;
+    }
+  }
+
+  // Disconnect from printer
   Future<void> disconnectPrinter() async {
     try {
-      if (connectedPrinter.value != null) {
-        await connectedPrinter.value!.disconnect();
-        connectedPrinter.value = null;
-        _writeCharacteristic = null;
-        isConnected.value = false;
-        Get.snackbar('Disconnected', 'Printer disconnected');
-      }
+      await PrintBluetoothThermal.disconnect;
+      isConnected.value = false;
+      connectedPrinter.value = null;
+      Get.snackbar('Success', 'Disconnected from printer');
     } catch (e) {
-      Get.snackbar('Disconnect Error', 'Failed to disconnect: $e');
+      print('Error disconnecting: $e');
     }
   }
 
-  Future<void> printReceipt(ReceiptModel receipt) async {
-    if (!isConnected.value || _writeCharacteristic == null) {
-      Get.snackbar('Print Error', 'No printer connected');
-      return;
-    }
+  // Professional printing dialog
+  void _showPrintingDialog({
+    required String title,
+    required String message,
+    String? receiptNumber,
+  }) {
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 8,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: 400),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF667eea).withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Animated background pattern
+                Positioned.fill(
+                  child: CustomPaint(painter: _PrintPatternPainter()),
+                ),
+                // Content
+                Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Printer icon with animation
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: Duration(milliseconds: 600),
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Container(
+                              padding: EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.print_rounded,
+                                size: 56,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      SizedBox(height: 24),
 
-    try {
-      List<int> bytes = [];
+                      // Title
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 12),
 
-      // Initialize
-      bytes.addAll(INIT);
+                      // Receipt number if provided
+                      if (receiptNumber != null) ...[
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'Receipt #$receiptNumber',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                      ],
 
-      // Store header
-      bytes.addAll(ALIGN_CENTER);
-      bytes.addAll(DOUBLE_SIZE);
-      bytes.addAll(BOLD_ON);
-      bytes.addAll(_encodeText(receipt.storeName));
-      bytes.addAll(LINE_FEED);
+                      // Message
+                      Text(
+                        message,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 32),
 
-      bytes.addAll(NORMAL);
-      bytes.addAll(BOLD_OFF);
-      bytes.addAll(_encodeText(receipt.storeAddress));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(_encodeText(receipt.storePhone));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(LINE_FEED);
+                      // Animated progress indicator
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: Duration(milliseconds: 800),
+                        builder: (context, value, child) {
+                          return SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Background circle
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                                // Progress indicator
+                                CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                                // Center dot
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      SizedBox(height: 24),
 
-      // Receipt info
-      bytes.addAll(ALIGN_LEFT);
-      bytes.addAll(_encodeText('Receipt: ${receipt.receiptNumber}'));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(
-        _encodeText(
-          'Date: ${DateFormat('MMM dd, yyyy HH:mm').format(receipt.timestamp)}',
-        ),
-      );
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(_encodeText('Cashier: ${receipt.cashierName}'));
-      bytes.addAll(LINE_FEED);
-
-      if (receipt.customerName != null) {
-        bytes.addAll(_encodeText('Customer: ${receipt.customerName}'));
-        bytes.addAll(LINE_FEED);
-      }
-
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(_encodeText('${'=' * 32}'));
-      bytes.addAll(LINE_FEED);
-
-      // Items
-      for (var item in receipt.items) {
-        String line = '${item.name}';
-        bytes.addAll(_encodeText(line));
-        bytes.addAll(LINE_FEED);
-
-        String details =
-            ' ${item.quantity}x ${CurrencyFormatter.format(item.price)}'
-                .padRight(20) +
-            CurrencyFormatter.format(item.total).padLeft(12);
-        bytes.addAll(_encodeText(details));
-        bytes.addAll(LINE_FEED);
-      }
-
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(_encodeText('${'=' * 32}'));
-      bytes.addAll(LINE_FEED);
-
-      // Totals
-      bytes.addAll(
-        _encodeText(
-          _formatLine('Subtotal:', CurrencyFormatter.format(receipt.subtotal)),
-        ),
-      );
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(
-        _encodeText(_formatLine('Tax:', CurrencyFormatter.format(receipt.tax))),
-      );
-      bytes.addAll(LINE_FEED);
-
-      if (receipt.discount > 0) {
-        bytes.addAll(
-          _encodeText(
-            _formatLine(
-              'Discount:',
-              '-${CurrencyFormatter.format(receipt.discount)}',
+                      // Status text
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _PulsingDot(),
+                          SizedBox(width: 8),
+                          Text(
+                            'Processing...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-        bytes.addAll(LINE_FEED);
+        ),
+      ),
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
+    );
+  }
+
+  // Test print
+  Future<void> testPrint() async {
+    try {
+      _showPrintingDialog(
+        title: 'Test Print',
+        message: 'Sending test print to printer...',
+      );
+
+      // Check connection and connect if needed
+      bool connected = await connectionStatus();
+      if (!connected && savedPrinterMac.value.isNotEmpty) {
+        await connectPrinter(savedPrinterMac.value);
       }
 
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(BOLD_ON);
-      bytes.addAll(DOUBLE_HEIGHT);
-      bytes.addAll(
-        _encodeText(
-          _formatLine('TOTAL:', CurrencyFormatter.format(receipt.total)),
-        ),
-      );
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(NORMAL);
-      bytes.addAll(BOLD_OFF);
-      bytes.addAll(LINE_FEED);
+      List<int> bytes = await _testTicket();
+      await PrintBluetoothThermal.writeBytes(bytes);
 
-      // Payment info
-      bytes.addAll(
-        _encodeText(
-          _formatLine('Payment:', receipt.paymentMethod.toUpperCase()),
-        ),
-      );
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(
-        _encodeText(
-          _formatLine(
-            'Amount Paid:',
-            CurrencyFormatter.format(receipt.amountPaid),
-          ),
-        ),
-      );
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(
-        _encodeText(
-          _formatLine('Change:', CurrencyFormatter.format(receipt.change)),
-        ),
-      );
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(LINE_FEED);
+      Get.back(); // Close loading dialog
+      Get.snackbar('Success', 'Test print completed');
+    } catch (e) {
+      Get.back(); // Close loading dialog
+      print('Error in test print: $e');
+      Get.snackbar('Error', 'Test print failed: $e');
+    }
+  }
 
-      // Footer
-      bytes.addAll(ALIGN_CENTER);
-      bytes.addAll(_encodeText('Thank you for your purchase!'));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(_encodeText('Please come again'));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(LINE_FEED);
+  // Generate test ticket
+  Future<List<int>> _testTicket() async {
+    List<int> bytes = [];
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm58, profile);
 
-      // Cut paper
-      bytes.addAll(CUT_PAPER);
+    bytes += generator.reset();
+    bytes += generator.text(
+      'PRINT TEST',
+      styles: PosStyles(
+        align: PosAlign.center,
+        bold: true,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+      ),
+    );
+    bytes += generator.text(
+      '-----------------------------',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.text(
+      'Date/Time: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.text(
+      '-----------------------------',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.feed(2);
+    bytes += generator.text('Regular text test');
+    bytes += generator.text('Bold text test', styles: PosStyles(bold: true));
+    bytes += generator.text(
+      'Underlined test',
+      styles: PosStyles(underline: true),
+    );
+    bytes += generator.feed(1);
+    bytes += generator.text(
+      'Align left',
+      styles: PosStyles(align: PosAlign.left),
+    );
+    bytes += generator.text(
+      'Align center',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.text(
+      'Align right',
+      styles: PosStyles(align: PosAlign.right),
+    );
+    bytes += generator.feed(2);
+    bytes += generator.qrcode('Test QR Code');
+    bytes += generator.feed(2);
+    bytes += generator.cut();
 
-      // Write to printer in chunks
-      const chunkSize = 20;
-      for (var i = 0; i < bytes.length; i += chunkSize) {
-        final end = (i + chunkSize < bytes.length)
-            ? i + chunkSize
-            : bytes.length;
-        await _writeCharacteristic!.write(
-          bytes.sublist(i, end),
-          withoutResponse: false,
-        );
-        await Future.delayed(Duration(milliseconds: 50));
+    return bytes;
+  }
+
+  // Print receipt from ReceiptModel
+  Future<void> printReceipt(ReceiptModel receipt) async {
+    try {
+      _showPrintingDialog(
+        title: 'Printing Receipt',
+        message: 'Please wait while we print your receipt...',
+        receiptNumber: receipt.receiptNumber,
+      );
+
+      // Check connection and connect if needed
+      bool connected = await connectionStatus();
+      if (!connected && savedPrinterMac.value.isNotEmpty) {
+        await connectPrinter(savedPrinterMac.value);
       }
 
+      List<int> bytes = await _generateReceipt(receipt);
+      await PrintBluetoothThermal.writeBytes(bytes);
+
+      Get.back(); // Close loading dialog
       Get.snackbar('Success', 'Receipt printed successfully');
     } catch (e) {
-      Get.snackbar('Print Error', 'Failed to print: $e');
+      Get.back(); // Close loading dialog
+      print('Error printing receipt: $e');
+      Get.snackbar('Error', 'Failed to print receipt: $e');
     }
   }
 
-  List<int> _encodeText(String text) {
-    return text.codeUnits;
-  }
+  // Generate receipt bytes
+  Future<List<int>> _generateReceipt(ReceiptModel receipt) async {
+    List<int> bytes = [];
+    final profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm58, profile);
 
-  String _formatLine(String label, String value) {
-    const width = 32;
-    final spaces = width - label.length - value.length;
-    return label + (' ' * spaces) + value;
-  }
+    // Get business settings for store name
+    final businessSettings = Get.find<BusinessSettingsController>();
 
-  Future<void> testPrint() async {
-    if (!isConnected.value || _writeCharacteristic == null) {
-      Get.snackbar('Print Error', 'No printer connected');
-      return;
+    bytes += generator.reset();
+
+    // Store header - Use store name from business settings
+    bytes += generator.text(
+      businessSettings.storeName.value.toUpperCase(),
+      styles: PosStyles(
+        align: PosAlign.center,
+        bold: true,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+      ),
+    );
+    bytes += generator.text(
+      businessSettings.storeAddress.value,
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.text(
+      'Phone: ${businessSettings.storePhone.value}',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.feed(1);
+
+    // Receipt title
+    bytes += generator.text(
+      '******************************************',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.text(
+      'CASH RECEIPT',
+      styles: PosStyles(
+        align: PosAlign.center,
+        bold: true,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+      ),
+    );
+    bytes += generator.text(
+      '******************************************',
+      styles: PosStyles(align: PosAlign.center),
+    );
+    bytes += generator.feed(1);
+
+    // Receipt info
+    bytes += generator.text(
+      'Receipt #: ${receipt.receiptNumber}',
+      styles: PosStyles(),
+    );
+    bytes += generator.text(
+      'Date: ${DateFormat('dd/MM/yyyy HH:mm').format(receipt.timestamp)}',
+      styles: PosStyles(),
+    );
+    bytes += generator.text(
+      'Cashier: ${receipt.cashierName}',
+      styles: PosStyles(),
+    );
+    if (receipt.customerName != null) {
+      bytes += generator.text(
+        'Customer: ${receipt.customerName}',
+        styles: PosStyles(),
+      );
+    }
+    bytes += generator.feed(1);
+
+    // Column headers
+    bytes += generator.row([
+      PosColumn(
+        text: 'Item',
+        width: 6,
+        styles: PosStyles(align: PosAlign.left, bold: true),
+      ),
+      PosColumn(
+        text: 'Qty',
+        width: 2,
+        styles: PosStyles(align: PosAlign.right, bold: true),
+      ),
+      PosColumn(
+        text: 'Price',
+        width: 4,
+        styles: PosStyles(align: PosAlign.right, bold: true),
+      ),
+    ]);
+    bytes += generator.text('-----------------------------');
+
+    // Items
+    for (var item in receipt.items) {
+      bytes += generator.row([
+        PosColumn(
+          text: item.name,
+          width: 6,
+          styles: PosStyles(align: PosAlign.left),
+        ),
+        PosColumn(
+          text: '${item.quantity}',
+          width: 2,
+          styles: PosStyles(align: PosAlign.right),
+        ),
+        PosColumn(
+          text: CurrencyFormatter.format(item.total),
+          width: 4,
+          styles: PosStyles(align: PosAlign.right),
+        ),
+      ]);
     }
 
-    try {
-      List<int> bytes = [];
-      bytes.addAll(INIT);
-      bytes.addAll(ALIGN_CENTER);
-      bytes.addAll(DOUBLE_SIZE);
-      bytes.addAll(BOLD_ON);
-      bytes.addAll(_encodeText('TEST PRINT'));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(NORMAL);
-      bytes.addAll(BOLD_OFF);
-      bytes.addAll(_encodeText('Printer is working correctly'));
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(LINE_FEED);
-      bytes.addAll(CUT_PAPER);
+    bytes += generator.text('-----------------------------');
+    bytes += generator.feed(1);
 
-      await _writeCharacteristic!.write(bytes, withoutResponse: false);
+    // Totals
+    bytes += generator.row([
+      PosColumn(
+        text: 'Subtotal:',
+        width: 6,
+        styles: PosStyles(align: PosAlign.left),
+      ),
+      PosColumn(
+        text: CurrencyFormatter.format(receipt.subtotal),
+        width: 6,
+        styles: PosStyles(align: PosAlign.right),
+      ),
+    ]);
 
-      Get.snackbar('Success', 'Test print successful');
-    } catch (e) {
-      Get.snackbar('Print Error', 'Test print failed: $e');
+    bytes += generator.row([
+      PosColumn(
+        text: 'Tax:',
+        width: 6,
+        styles: PosStyles(align: PosAlign.left),
+      ),
+      PosColumn(
+        text: CurrencyFormatter.format(receipt.tax),
+        width: 6,
+        styles: PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    if (receipt.discount > 0) {
+      bytes += generator.row([
+        PosColumn(
+          text: 'Discount:',
+          width: 6,
+          styles: PosStyles(align: PosAlign.left),
+        ),
+        PosColumn(
+          text: '-${CurrencyFormatter.format(receipt.discount)}',
+          width: 6,
+          styles: PosStyles(align: PosAlign.right),
+        ),
+      ]);
     }
+
+    bytes += generator.text('-----------------------------');
+
+    bytes += generator.row([
+      PosColumn(
+        text: 'TOTAL:',
+        width: 6,
+        styles: PosStyles(
+          align: PosAlign.left,
+          bold: true,
+          height: PosTextSize.size2,
+          width: PosTextSize.size2,
+        ),
+      ),
+      PosColumn(
+        text: CurrencyFormatter.format(receipt.total),
+        width: 6,
+        styles: PosStyles(
+          align: PosAlign.right,
+          bold: true,
+          height: PosTextSize.size2,
+          width: PosTextSize.size2,
+        ),
+      ),
+    ]);
+
+    bytes += generator.feed(1);
+
+    // Payment details
+    bytes += generator.row([
+      PosColumn(
+        text: 'Cash:',
+        width: 6,
+        styles: PosStyles(align: PosAlign.left),
+      ),
+      PosColumn(
+        text: CurrencyFormatter.format(receipt.amountPaid),
+        width: 6,
+        styles: PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: 'Change:',
+        width: 6,
+        styles: PosStyles(align: PosAlign.left),
+      ),
+      PosColumn(
+        text: CurrencyFormatter.format(receipt.change),
+        width: 6,
+        styles: PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        text: 'Payment:',
+        width: 6,
+        styles: PosStyles(align: PosAlign.left),
+      ),
+      PosColumn(
+        text: receipt.paymentMethod.toUpperCase(),
+        width: 6,
+        styles: PosStyles(align: PosAlign.right),
+      ),
+    ]);
+
+    bytes += generator.text('-----------------------------');
+    bytes += generator.feed(1);
+
+    // Footer
+    bytes += generator.text(
+      'THANK YOU!',
+      styles: PosStyles(
+        align: PosAlign.center,
+        bold: true,
+        height: PosTextSize.size2,
+        width: PosTextSize.size2,
+      ),
+    );
+    bytes += generator.feed(1);
+
+    // QR Code with transaction ID
+    bytes += generator.qrcode(receipt.transactionId);
+    bytes += generator.feed(2);
+
+    bytes += generator.text(
+      'Powered by Dynamos POS',
+      styles: PosStyles(align: PosAlign.center, fontType: PosFontType.fontB),
+    );
+
+    bytes += generator.feed(2);
+    bytes += generator.cut();
+
+    return bytes;
+  }
+}
+
+// Custom painter for background pattern
+class _PrintPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Draw printer-like pattern
+    final spacing = 20.0;
+    for (double i = 0; i < size.height; i += spacing) {
+      // Horizontal lines
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+
+    // Draw diagonal lines
+    for (double i = -size.height; i < size.width; i += spacing * 2) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i + size.height, size.height),
+        paint..color = Colors.white.withOpacity(0.03),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Pulsing dot animation widget
+class _PulsingDot extends StatefulWidget {
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(_animation.value),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withOpacity(_animation.value * 0.5),
+                blurRadius: 8,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

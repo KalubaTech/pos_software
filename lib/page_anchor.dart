@@ -9,6 +9,7 @@ import 'views/transactions/transactions_view.dart';
 import 'views/customers/customers_view.dart';
 import 'views/inventory/enhanced_inventory_view.dart';
 import 'views/reports/reports_view.dart';
+import 'views/price_tag_designer/price_tag_designer_view.dart';
 import 'views/settings/enhanced_settings_view.dart';
 import 'utils/colors.dart';
 
@@ -23,7 +24,7 @@ class PageAnchor extends StatelessWidget {
       body: Column(
         children: [
           // Top bar with cashier info
-        /*  Container(
+          /*  Container(
             height: 60,
             padding: EdgeInsets.symmetric(horizontal: 24),
             decoration: BoxDecoration(
@@ -144,6 +145,8 @@ class PageAnchor extends StatelessWidget {
         return EnhancedInventoryView();
       case 'reports':
         return ReportsView();
+      case 'price tags':
+        return PriceTagDesignerView();
       case 'settings':
         return EnhancedSettingsView();
       default:

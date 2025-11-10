@@ -4,7 +4,9 @@ import 'package:iconsax/iconsax.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../utils/colors.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/business_settings_controller.dart';
 import '../../services/printer_service.dart';
+import '../../services/printer_bluetooth_helper.dart';
 import '../../models/cashier_model.dart';
 import 'business_settings_view.dart';
 import 'appearance_settings_view.dart';
@@ -113,13 +115,14 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Printer Configuration (only show if available)
-          if (printerService != null)
-            FadeInUp(
-              duration: Duration(milliseconds: 400),
-              child: _buildPrinterSection(printerService),
-            ),
-          if (printerService != null) SizedBox(height: 24),
+          // Printer Configuration - always show
+          FadeInUp(
+            duration: Duration(milliseconds: 400),
+            child: printerService != null
+                ? _buildPrinterSection(printerService)
+                : _buildPrinterUnavailableSection(),
+          ),
+          SizedBox(height: 24),
 
           // Cashier Management (Admin only)
           Obx(() {
@@ -192,7 +195,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                           if (isConnected && connectedDevice != null) ...[
                             SizedBox(height: 4),
                             Text(
-                              connectedDevice.platformName,
+                              connectedDevice.name,
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14,
@@ -235,8 +238,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           if (printerService.connectedPrinter.value != null) {
-                            await printerService.connectedPrinter.value!
-                                .disconnect();
+                            await printerService.disconnectPrinter();
                             printerService.connectedPrinter.value = null;
                             printerService.isConnected.value = false;
                           }
@@ -259,6 +261,530 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildPrinterUnavailableSection() {
+    final businessController = Get.find<BusinessSettingsController>();
+
+    return _buildSectionCard(
+      title: 'Printer Configuration',
+      icon: Iconsax.printer,
+      iconColor: Colors.blue,
+      children: [
+        Obx(() {
+          final hasPrinter =
+              businessController.receiptPrinterName.value.isNotEmpty;
+
+          return Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: hasPrinter
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasPrinter
+                        ? Colors.green.withValues(alpha: 0.3)
+                        : Colors.orange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: hasPrinter ? Colors.green : Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        hasPrinter ? Iconsax.tick_circle : Iconsax.warning_2,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hasPrinter
+                                ? 'Printer Configured'
+                                : 'No Printer Configured',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (hasPrinter) ...[
+                            SizedBox(height: 4),
+                            Text(
+                              businessController.receiptPrinterName.value,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              '${businessController.receiptPrinterType.value} Connection',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showManualPrinterDialog(businessController),
+                  icon: Icon(Iconsax.setting_2, size: 18),
+                  label: Text(hasPrinter ? 'Configure Printer' : 'Add Printer'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.info_circle, color: Colors.blue, size: 20),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Configure your receipt printer here. For mobile Bluetooth scanning, use an Android or iOS device.',
+                        style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  void _showManualPrinterDialog(BusinessSettingsController controller) {
+    final nameController = TextEditingController(
+      text: controller.receiptPrinterName.value,
+    );
+    final addressController = TextEditingController(
+      text: controller.receiptPrinterAddress.value,
+    );
+    final portController = TextEditingController(
+      text: controller.receiptPrinterPort.value,
+    );
+    String selectedType = controller.receiptPrinterType.value;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              width: 500,
+              padding: EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Iconsax.printer, color: Colors.blue),
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Configure Printer',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 24),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Printer Name',
+                        hintText: 'e.g., Main Counter Printer',
+                        prefixIcon: Icon(Iconsax.printer),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedType,
+                      decoration: InputDecoration(
+                        labelText: 'Connection Type',
+                        prefixIcon: Icon(Iconsax.link),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      items: ['USB', 'Network', 'Bluetooth']
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => selectedType = value);
+                        }
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    if (selectedType == 'Network') ...[
+                      TextField(
+                        controller: addressController,
+                        decoration: InputDecoration(
+                          labelText: 'IP Address',
+                          hintText: 'e.g., 192.168.1.100',
+                          prefixIcon: Icon(Iconsax.global),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      TextField(
+                        controller: portController,
+                        decoration: InputDecoration(
+                          labelText: 'Port',
+                          hintText: 'e.g., 9100',
+                          prefixIcon: Icon(Iconsax.link_21),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ] else if (selectedType == 'Bluetooth') ...[
+                      TextField(
+                        controller: addressController,
+                        decoration: InputDecoration(
+                          labelText: 'Bluetooth Address',
+                          hintText: 'e.g., 00:11:22:33:44:55',
+                          prefixIcon: Icon(Iconsax.bluetooth),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        readOnly: true,
+                      ),
+                      SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            _showBluetoothScanDialog(
+                              nameController,
+                              addressController,
+                              setState,
+                            );
+                          },
+                          icon: Icon(Iconsax.search_normal, size: 18),
+                          label: Text('Scan for Bluetooth Printers'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      TextField(
+                        controller: addressController,
+                        decoration: InputDecoration(
+                          labelText: 'Device Path (Optional)',
+                          hintText: 'e.g., COM3 or /dev/usb/lp0',
+                          prefixIcon: Icon(Iconsax.link),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Get.back(),
+                          child: Text('Cancel'),
+                        ),
+                        SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            controller.receiptPrinterName.value =
+                                nameController.text;
+                            controller.receiptPrinterType.value = selectedType;
+                            controller.receiptPrinterAddress.value =
+                                addressController.text;
+                            controller.receiptPrinterPort.value =
+                                portController.text;
+                            controller.saveSettings();
+                            Get.back();
+                            Get.snackbar(
+                              'Success',
+                              'Printer configured successfully',
+                              backgroundColor: Colors.green,
+                              colorText: Colors.white,
+                            );
+                          },
+                          icon: Icon(Iconsax.tick_circle, size: 18),
+                          label: Text('Save Configuration'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showBluetoothScanDialog(
+    TextEditingController nameController,
+    TextEditingController addressController,
+    StateSetter parentSetState,
+  ) {
+    final printerHelper = PrinterBluetoothHelper();
+    final isScanning = false.obs;
+    final devices = <dynamic>[].obs;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 500,
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Iconsax.bluetooth, color: Colors.blue, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Scan Bluetooth Printers',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+              Obx(() {
+                if (isScanning.value) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Scanning for Bluetooth printers...'),
+                          SizedBox(height: 8),
+                          Text(
+                            'Make sure printer is powered on and in pairing mode',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                if (devices.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Iconsax.search_status,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No printers found',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Click "Scan" to search for nearby Bluetooth printers',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return Container(
+                  constraints: BoxConstraints(maxHeight: 300),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: devices.length,
+                    itemBuilder: (context, index) {
+                      final device = devices[index];
+                      return Card(
+                        margin: EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Iconsax.printer, color: Colors.blue),
+                          ),
+                          title: Text(
+                            device.name,
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(device.macAdress),
+                          trailing: ElevatedButton(
+                            onPressed: () {
+                              // Fill in the name and address
+                              if (nameController.text.isEmpty) {
+                                nameController.text = device.name;
+                              }
+                              addressController.text = device.macAdress;
+
+                              // Update parent dialog
+                              parentSetState(() {});
+
+                              // Close scan dialog
+                              Get.back();
+
+                              Get.snackbar(
+                                'Selected',
+                                'Printer selected: ${device.name}',
+                                backgroundColor: Colors.green,
+                                colorText: Colors.white,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: Text('Select'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel'),
+                  ),
+                  SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      isScanning.value = true;
+                      try {
+                        final result = await printerHelper.listBluetooths();
+                        devices.value = result;
+
+                        if (result.isEmpty) {
+                          Get.snackbar(
+                            'No Devices',
+                            'No Bluetooth printers found. Make sure your printer is paired.',
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                          );
+                        }
+                      } catch (e) {
+                        Get.snackbar(
+                          'Error',
+                          'Failed to scan: $e',
+                          backgroundColor: Colors.red,
+                          colorText: Colors.white,
+                        );
+                      } finally {
+                        isScanning.value = false;
+                      }
+                    },
+                    icon: Icon(Iconsax.refresh, size: 18),
+                    label: Text('Scan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -344,13 +870,13 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                         child: Icon(Iconsax.printer, color: Colors.blue),
                       ),
                       title: Text(
-                        device.platformName,
+                        device.name,
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      subtitle: Text(device.remoteId.toString()),
+                      subtitle: Text(device.macAdress),
                       trailing: ElevatedButton(
                         onPressed: () async {
-                          await printerService.connectToPrinter(device);
+                          await printerService.connectPrinter(device.macAdress);
                           Get.back();
                         },
                         style: ElevatedButton.styleFrom(
@@ -372,7 +898,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
               TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
               SizedBox(width: 12),
               ElevatedButton.icon(
-                onPressed: () => printerService.scanForPrinters(),
+                onPressed: () => printerService.listBluetoothPrinters(),
                 icon: Icon(Iconsax.refresh, size: 18),
                 label: Text('Scan Again'),
                 style: ElevatedButton.styleFrom(

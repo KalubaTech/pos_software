@@ -7,11 +7,12 @@ import '../models/product_model.dart';
 import '../models/transaction_model.dart';
 import '../models/client_model.dart';
 import '../models/cart_item_model.dart';
+import '../models/price_tag_template_model.dart';
 
 class DatabaseService extends GetxController {
   static Database? _database;
   static const String _databaseName = 'pos_software.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   // Table names
   static const String productsTable = 'products';
@@ -20,6 +21,8 @@ class DatabaseService extends GetxController {
   static const String transactionItemsTable = 'transaction_items';
   static const String customersTable = 'customers';
   static const String settingsTable = 'settings';
+  static const String priceTagTemplatesTable = 'price_tag_templates';
+  static const String printersTable = 'printers';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -153,6 +156,36 @@ class DatabaseService extends GetxController {
       )
     ''');
 
+    // Price Tag Templates table
+    await db.execute('''
+      CREATE TABLE $priceTagTemplatesTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        width REAL NOT NULL,
+        height REAL NOT NULL,
+        elements TEXT NOT NULL,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+
+    // Printers table
+    await db.execute('''
+      CREATE TABLE $printersTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        connectionType TEXT NOT NULL,
+        address TEXT,
+        port INTEGER,
+        paperWidth INTEGER,
+        isDefault INTEGER DEFAULT 0,
+        isActive INTEGER DEFAULT 1,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+
     // Create indexes for better performance
     await db.execute(
       'CREATE INDEX idx_products_category ON $productsTable(category)',
@@ -181,8 +214,35 @@ class DatabaseService extends GetxController {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Handle database migrations here
     if (oldVersion < 2) {
-      // Example migration for version 2
-      // await db.execute('ALTER TABLE $productsTable ADD COLUMN newColumn TEXT');
+      // Add price tag templates table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $priceTagTemplatesTable (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          width REAL NOT NULL,
+          height REAL NOT NULL,
+          elements TEXT NOT NULL,
+          createdAt TEXT,
+          updatedAt TEXT
+        )
+      ''');
+
+      // Add printers table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $printersTable (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          connectionType TEXT NOT NULL,
+          address TEXT,
+          port INTEGER,
+          paperWidth INTEGER,
+          isDefault INTEGER DEFAULT 0,
+          isActive INTEGER DEFAULT 1,
+          createdAt TEXT,
+          updatedAt TEXT
+        )
+      ''');
     }
   }
 
@@ -765,6 +825,160 @@ class DatabaseService extends GetxController {
     await db.delete(transactionItemsTable);
     await db.delete(customersTable);
     await db.delete(settingsTable);
+    await db.delete(priceTagTemplatesTable);
+    await db.delete(printersTable);
+  }
+
+  // ==================== PRICE TAG TEMPLATES ====================
+
+  Future<int> insertTemplate(PriceTagTemplate template) async {
+    final db = await database;
+    try {
+      await db.insert(
+        priceTagTemplatesTable,
+        _templateToMap(template),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return 1;
+    } catch (e) {
+      print('Error inserting template: $e');
+      return 0;
+    }
+  }
+
+  Future<List<PriceTagTemplate>> getAllTemplates() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      priceTagTemplatesTable,
+      orderBy: 'createdAt DESC',
+    );
+    return maps.map((map) => _templateFromMap(map)).toList();
+  }
+
+  Future<PriceTagTemplate?> getTemplateById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      priceTagTemplatesTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return _templateFromMap(maps.first);
+  }
+
+  Future<int> updateTemplate(PriceTagTemplate template) async {
+    final db = await database;
+    return await db.update(
+      priceTagTemplatesTable,
+      _templateToMap(template),
+      where: 'id = ?',
+      whereArgs: [template.id],
+    );
+  }
+
+  Future<int> deleteTemplate(String id) async {
+    final db = await database;
+    return await db.delete(
+      priceTagTemplatesTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Map<String, dynamic> _templateToMap(PriceTagTemplate template) {
+    return {
+      'id': template.id,
+      'name': template.name,
+      'width': template.width,
+      'height': template.height,
+      'elements': template.toJson()['elements'].toString(),
+      'createdAt': template.createdAt.toIso8601String(),
+      'updatedAt': template.updatedAt.toIso8601String(),
+    };
+  }
+
+  PriceTagTemplate _templateFromMap(Map<String, dynamic> map) {
+    return PriceTagTemplate.fromJson({
+      'id': map['id'],
+      'name': map['name'],
+      'width': map['width'],
+      'height': map['height'],
+      'elements': map['elements'],
+      'createdAt': map['createdAt'],
+      'updatedAt': map['updatedAt'],
+    });
+  }
+
+  // ==================== PRINTERS ====================
+
+  Future<int> insertPrinter(Map<String, dynamic> printer) async {
+    final db = await database;
+    try {
+      await db.insert(
+        printersTable,
+        printer,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return 1;
+    } catch (e) {
+      print('Error inserting printer: $e');
+      return 0;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPrinters() async {
+    final db = await database;
+    return await db.query(
+      printersTable,
+      where: 'isActive = ?',
+      whereArgs: [1],
+      orderBy: 'isDefault DESC, name ASC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getDefaultPrinter() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      printersTable,
+      where: 'isDefault = ? AND isActive = ?',
+      whereArgs: [1, 1],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<int> updatePrinter(String id, Map<String, dynamic> printer) async {
+    final db = await database;
+    return await db.update(
+      printersTable,
+      printer,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> setDefaultPrinter(String id) async {
+    final db = await database;
+    // First, remove default from all printers
+    await db.update(printersTable, {'isDefault': 0});
+    // Then set the new default
+    return await db.update(
+      printersTable,
+      {'isDefault': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deletePrinter(String id) async {
+    final db = await database;
+    return await db.update(
+      printersTable,
+      {'isActive': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // Close database
