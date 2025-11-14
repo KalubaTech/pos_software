@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../controllers/business_settings_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 
 class BusinessSettingsView extends StatelessWidget {
@@ -10,46 +11,51 @@ class BusinessSettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(BusinessSettingsController());
+    final appearanceController = Get.find<AppearanceController>();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Column(
-        children: [
-          _buildHeader(controller),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStoreInformation(controller),
-                  SizedBox(height: 24),
-                  _buildTaxConfiguration(controller),
-                  SizedBox(height: 24),
-                  _buildCurrencySettings(controller),
-                  SizedBox(height: 24),
-                  _buildReceiptSettings(controller),
-                  SizedBox(height: 24),
-                  _buildOperatingHours(controller),
-                  SizedBox(height: 24),
-                  _buildPaymentMethods(controller),
-                ],
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
+
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
+        body: Column(
+          children: [
+            _buildHeader(controller, isDark),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildStoreInformation(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildTaxConfiguration(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildCurrencySettings(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildReceiptSettings(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildOperatingHours(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildPaymentMethods(controller, isDark),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildHeader(BusinessSettingsController controller) {
+  Widget _buildHeader(BusinessSettingsController controller, bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.getSurfaceColor(isDark),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -63,12 +69,19 @@ class BusinessSettingsView extends StatelessWidget {
             children: [
               Text(
                 'Business Settings',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               SizedBox(height: 4),
               Text(
                 'Configure your store information and preferences',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                  color: AppColors.getTextSecondary(isDark),
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -78,9 +91,18 @@ class BusinessSettingsView extends StatelessWidget {
                 onPressed: () {
                   Get.dialog(
                     AlertDialog(
-                      title: Text('Reset to Defaults'),
+                      backgroundColor: AppColors.getSurfaceColor(isDark),
+                      title: Text(
+                        'Reset to Defaults',
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                      ),
                       content: Text(
                         'Are you sure you want to reset all settings to default values?',
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
                       ),
                       actions: [
                         TextButton(
@@ -122,7 +144,9 @@ class BusinessSettingsView extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: isDark
+                      ? AppColors.darkPrimary
+                      : AppColors.primary,
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
               ),
@@ -133,8 +157,13 @@ class BusinessSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildStoreInformation(BusinessSettingsController controller) {
+  Widget _buildStoreInformation(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -142,11 +171,18 @@ class BusinessSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.shop, color: AppColors.primary),
+                Icon(
+                  Iconsax.shop,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Store Information',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -158,12 +194,20 @@ class BusinessSettingsView extends StatelessWidget {
                       ..selection = TextSelection.collapsed(
                         offset: controller.storeName.value.length,
                       ),
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Store Name *',
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   prefixIcon: Icon(Iconsax.building),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.darkSurfaceVariant
+                      : Colors.grey[50],
                 ),
                 onChanged: (value) => controller.storeName.value = value,
               ),
@@ -261,8 +305,13 @@ class BusinessSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildTaxConfiguration(BusinessSettingsController controller) {
+  Widget _buildTaxConfiguration(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -270,11 +319,18 @@ class BusinessSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.receipt_1, color: AppColors.primary),
+                Icon(
+                  Iconsax.receipt_1,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Tax Configuration',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -362,8 +418,13 @@ class BusinessSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildCurrencySettings(BusinessSettingsController controller) {
+  Widget _buildCurrencySettings(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -371,11 +432,18 @@ class BusinessSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.dollar_circle, color: AppColors.primary),
+                Icon(
+                  Iconsax.dollar_circle,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Currency Settings',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -509,8 +577,13 @@ class BusinessSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptSettings(BusinessSettingsController controller) {
+  Widget _buildReceiptSettings(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -518,11 +591,18 @@ class BusinessSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.receipt_text, color: AppColors.primary),
+                Icon(
+                  Iconsax.receipt_text,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Receipt Settings',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -781,8 +861,13 @@ class BusinessSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildOperatingHours(BusinessSettingsController controller) {
+  Widget _buildOperatingHours(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -790,11 +875,18 @@ class BusinessSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.clock, color: AppColors.primary),
+                Icon(
+                  Iconsax.clock,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Operating Hours',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -915,8 +1007,13 @@ class BusinessSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentMethods(BusinessSettingsController controller) {
+  Widget _buildPaymentMethods(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -924,11 +1021,18 @@ class BusinessSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.wallet_2, color: AppColors.primary),
+                Icon(
+                  Iconsax.wallet_2,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Payment Methods',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),

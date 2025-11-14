@@ -6,8 +6,11 @@ import 'package:barcode_widget/barcode_widget.dart';
 import 'package:barcode/barcode.dart' as bc;
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../controllers/price_tag_designer_controller.dart';
+import '../../../controllers/product_controller.dart';
+import '../../../controllers/appearance_controller.dart';
 import '../../../models/price_tag_template_model.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/colors.dart';
 
 class CanvasWidget extends StatelessWidget {
   const CanvasWidget({super.key});
@@ -15,6 +18,7 @@ class CanvasWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<PriceTagDesignerController>();
+    final appearanceController = Get.find<AppearanceController>();
 
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
@@ -52,26 +56,34 @@ class CanvasWidget extends StatelessWidget {
       },
       child: Obx(() {
         final template = controller.currentTemplate.value;
+        final isDark = appearanceController.isDarkMode.value;
 
         if (template == null) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Iconsax.document_1, size: 80, color: Colors.grey[300]),
+                Icon(
+                  Iconsax.document_1,
+                  size: 80,
+                  color: isDark ? Colors.grey[700] : Colors.grey[300],
+                ),
                 SizedBox(height: 16),
                 Text(
                   'No template selected',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.grey[600],
+                    color: AppColors.getTextSecondary(isDark),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Select a template or create a new one',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.getTextTertiary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -79,7 +91,7 @@ class CanvasWidget extends StatelessWidget {
         }
 
         return Container(
-          color: Colors.grey[200],
+          color: isDark ? AppColors.darkBackground : Colors.grey[200],
           child: Center(
             child: InteractiveViewer(
               minScale: 0.25,
@@ -87,7 +99,7 @@ class CanvasWidget extends StatelessWidget {
               constrained: false,
               child: Container(
                 padding: EdgeInsets.all(50),
-                child: _buildCanvas(controller, template),
+                child: _buildCanvas(controller, template, isDark),
               ),
             ),
           ),
@@ -99,6 +111,7 @@ class CanvasWidget extends StatelessWidget {
   Widget _buildCanvas(
     PriceTagDesignerController controller,
     PriceTagTemplate template,
+    bool isDark,
   ) {
     // Convert mm to pixels (assuming 96 DPI)
     final double mmToPixel = 3.7795275591;
@@ -171,6 +184,11 @@ class CanvasWidget extends StatelessWidget {
                 element.type == ElementType.productName ||
                 element.type == ElementType.price) {
               _showTextEditDialog(controller, element);
+            }
+            // Enable barcode editing on double click
+            else if (element.type == ElementType.barcode ||
+                element.type == ElementType.qrCode) {
+              _showBarcodeEditDialog(controller, element);
             }
           },
           onPanStart: (details) {
@@ -808,6 +826,305 @@ class CanvasWidget extends StatelessWidget {
             child: Text('Save'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showBarcodeEditDialog(
+    PriceTagDesignerController controller,
+    PriceTagElement element,
+  ) {
+    final barcodeController = TextEditingController(
+      text: element.barcodeData ?? '',
+    );
+    String selectedBarcodeType = element.barcodeType;
+    String? selectedProductField = element.productFieldLink;
+    String? selectedProductId = element.linkedProductId;
+
+    // Get product controller to access products
+    final productController = Get.find<ProductController>();
+
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(
+                  Iconsax.barcode,
+                  color: element.type == ElementType.qrCode
+                      ? Colors.green
+                      : Colors.blue,
+                ),
+                SizedBox(width: 12),
+                Text('Edit ${_getElementLabel(element)}'),
+              ],
+            ),
+            content: Container(
+              width: 450,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Barcode Data Input
+                    Text(
+                      'Barcode Data:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: barcodeController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter barcode data...',
+                        prefixIcon: Icon(Iconsax.edit_2),
+                      ),
+                      onSubmitted: (value) {
+                        controller.updateElement(
+                          element.copyWith(
+                            barcodeData: value,
+                            barcodeType: selectedBarcodeType,
+                            productFieldLink: selectedProductField,
+                          ),
+                          save: true,
+                        );
+                        Get.back();
+                      },
+                    ),
+                    SizedBox(height: 16),
+
+                    // Barcode Type Selector (only for barcode, not QR)
+                    if (element.type == ElementType.barcode) ...[
+                      Text(
+                        'Barcode Type:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedBarcodeType,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Iconsax.scan_barcode),
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'code128',
+                            child: Text('Code 128'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'code39',
+                            child: Text('Code 39'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'ean13',
+                            child: Text('EAN-13'),
+                          ),
+                          DropdownMenuItem(value: 'ean8', child: Text('EAN-8')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedBarcodeType = value!;
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+                    ],
+
+                    // Product Field Association
+                    Text(
+                      'Link to Product Field (Optional):',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    DropdownButtonFormField<String?>(
+                      value: selectedProductField,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Iconsax.link),
+                        hintText: 'None',
+                      ),
+                      items: [
+                        DropdownMenuItem(value: null, child: Text('None')),
+                        DropdownMenuItem(
+                          value: 'barcode',
+                          child: Text('Product Barcode'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'sku',
+                          child: Text('Product SKU'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedProductField = value;
+                          // Reset product selection if field link is removed
+                          if (value == null) {
+                            selectedProductId = null;
+                          }
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+
+                    // Product Selection (only show if field is linked)
+                    if (selectedProductField != null) ...[
+                      Text(
+                        'Select Product to Update:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Obx(() {
+                        final products = productController.products;
+                        return DropdownButtonFormField<String?>(
+                          value: selectedProductId,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Iconsax.box),
+                            hintText: 'Choose a product',
+                          ),
+                          isExpanded: true,
+                          items: [
+                            DropdownMenuItem(
+                              value: null,
+                              child: Text('None selected'),
+                            ),
+                            ...products.map((product) {
+                              return DropdownMenuItem(
+                                value: product.id,
+                                child: Text(
+                                  product.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedProductId = value;
+                            });
+                          },
+                        );
+                      }),
+                      SizedBox(height: 8),
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.info_circle,
+                              size: 14,
+                              color: Colors.blue[700],
+                            ),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'This product\'s ${selectedProductField} field will be updated when printing',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.blue[900],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 12),
+
+                    // Info Box
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber[50],
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.amber[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Iconsax.info_circle,
+                                size: 16,
+                                color: Colors.amber[700],
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'About Product Field Linking:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber[900],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            '• Link to product field to update it when printing\n'
+                            '• If linked, you can update the product\'s barcode/SKU\n'
+                            '• If not linked, barcode is static and print-only',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.amber[900],
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+              ElevatedButton(
+                onPressed: () {
+                  controller.updateElement(
+                    element.copyWith(
+                      barcodeData: barcodeController.text,
+                      barcodeType: selectedBarcodeType,
+                      productFieldLink: selectedProductField,
+                      linkedProductId: selectedProductId,
+                    ),
+                    save: true,
+                  );
+                  Get.back();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

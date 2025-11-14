@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import '../../../controllers/printer_controller.dart';
+import '../../../controllers/appearance_controller.dart';
 import '../../../models/printer_model.dart';
 import '../../../services/printer_bluetooth_helper.dart';
 import '../../../utils/colors.dart';

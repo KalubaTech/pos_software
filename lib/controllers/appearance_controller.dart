@@ -72,6 +72,15 @@ class AppearanceController extends GetxController {
   void setThemeMode(String mode) {
     themeMode.value = mode;
     isDarkMode.value = mode == 'dark';
+    saveSettings();
+  }
+
+  void toggleTheme() {
+    if (themeMode.value == 'dark') {
+      setThemeMode('light');
+    } else {
+      setThemeMode('dark');
+    }
   }
 
   void setPrimaryColor(int color) {

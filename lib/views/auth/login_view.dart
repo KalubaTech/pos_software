@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 
 class LoginView extends StatefulWidget {
@@ -20,67 +21,84 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.primary.withValues(alpha: 0.7),
-              AppColors.secondary.withValues(alpha: 0.5),
-            ],
+    final appearanceController = Get.find<AppearanceController>();
+
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
+
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [
+                      AppColors.darkBackground,
+                      AppColors.darkSurface,
+                      AppColors.darkSurfaceVariant,
+                    ]
+                  : [
+                      AppColors.primary,
+                      AppColors.primary.withValues(alpha: 0.7),
+                      AppColors.secondary.withValues(alpha: 0.5),
+                    ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FadeInDown(
-                    duration: Duration(milliseconds: 800),
-                    child: _buildLogo(),
-                  ),
-                  SizedBox(height: 60),
-                  FadeInUp(
-                    duration: Duration(milliseconds: 800),
-                    child: _buildLoginCard(),
-                  ),
-                  SizedBox(height: 24),
-                  FadeInUp(
-                    duration: Duration(milliseconds: 1000),
-                    delay: Duration(milliseconds: 200),
-                    child: _buildQuickLoginSection(),
-                  ),
-                ],
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FadeInDown(
+                      duration: Duration(milliseconds: 800),
+                      child: _buildLogo(isDark),
+                    ),
+                    SizedBox(height: 60),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      child: _buildLoginCard(isDark),
+                    ),
+                    SizedBox(height: 24),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 1000),
+                      delay: Duration(milliseconds: 200),
+                      child: _buildQuickLoginSection(isDark),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(bool isDark) {
     return Column(
       children: [
         Container(
           padding: EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppColors.darkSurface : Colors.white,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: (isDark ? AppColors.darkPrimary : Colors.black)
+                    .withValues(alpha: isDark ? 0.3 : 0.2),
                 blurRadius: 20,
                 offset: Offset(0, 10),
               ),
             ],
           ),
-          child: Icon(Iconsax.shop, size: 80, color: AppColors.primary),
+          child: Icon(
+            Iconsax.shop,
+            size: 80,
+            color: isDark ? AppColors.darkPrimary : AppColors.primary,
+          ),
         ),
         SizedBox(height: 24),
         Text(
@@ -88,7 +106,7 @@ class _LoginViewState extends State<LoginView> {
           style: TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: isDark ? AppColors.darkTextPrimary : Colors.white,
             letterSpacing: 1.2,
           ),
         ),
@@ -97,7 +115,9 @@ class _LoginViewState extends State<LoginView> {
           'Point of Sale System',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.white.withValues(alpha: 0.9),
+            color: isDark
+                ? AppColors.darkTextSecondary
+                : Colors.white.withValues(alpha: 0.9),
             letterSpacing: 0.5,
           ),
         ),
@@ -105,16 +125,19 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Widget _buildLoginCard() {
+  Widget _buildLoginCard(bool isDark) {
     return Container(
       constraints: BoxConstraints(maxWidth: 450),
       padding: EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: isDark
+            ? Border.all(color: AppColors.darkSurfaceVariant, width: 1)
+            : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 30,
             offset: Offset(0, 15),
           ),
@@ -128,30 +151,35 @@ class _LoginViewState extends State<LoginView> {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: AppColors.getTextPrimary(isDark),
             ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 8),
           Text(
             'Enter your 4-digit PIN to continue',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.getTextSecondary(isDark),
+            ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 32),
-          _buildPinDisplay(),
+          _buildPinDisplay(isDark),
           SizedBox(height: 32),
-          _buildNumPad(),
+          _buildNumPad(isDark),
         ],
       ),
     );
   }
 
-  Widget _buildPinDisplay() {
+  Widget _buildPinDisplay(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(4, (index) {
         final isFilled = index < enteredPin.length;
+        final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
+
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: 12),
           child: AnimatedContainer(
@@ -159,17 +187,26 @@ class _LoginViewState extends State<LoginView> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: isFilled ? AppColors.primary : Colors.grey[200],
+              color: isFilled
+                  ? primaryColor
+                  : (isDark ? AppColors.darkSurfaceVariant : Colors.grey[200]),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isFilled ? AppColors.primary : Colors.grey[300]!,
+                color: isFilled
+                    ? primaryColor
+                    : (isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey[300]!),
                 width: 2,
               ),
             ),
             child: Center(
               child: Text(
                 isFilled ? '●' : '',
-                style: TextStyle(fontSize: 32, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 32,
+                  color: isDark ? AppColors.darkTextPrimary : Colors.white,
+                ),
               ),
             ),
           ),
@@ -178,21 +215,21 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Widget _buildNumPad() {
+  Widget _buildNumPad(bool isDark) {
     return Column(
       children: [
-        _buildNumPadRow(['1', '2', '3']),
+        _buildNumPadRow(['1', '2', '3'], isDark),
         SizedBox(height: 12),
-        _buildNumPadRow(['4', '5', '6']),
+        _buildNumPadRow(['4', '5', '6'], isDark),
         SizedBox(height: 12),
-        _buildNumPadRow(['7', '8', '9']),
+        _buildNumPadRow(['7', '8', '9'], isDark),
         SizedBox(height: 12),
-        _buildNumPadRow(['', '0', 'back']),
+        _buildNumPadRow(['', '0', 'back'], isDark),
       ],
     );
   }
 
-  Widget _buildNumPadRow(List<String> numbers) {
+  Widget _buildNumPadRow(List<String> numbers, bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: numbers.map((number) {
@@ -200,13 +237,13 @@ class _LoginViewState extends State<LoginView> {
 
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
-          child: _buildNumPadButton(number),
+          child: _buildNumPadButton(number, isDark),
         );
       }).toList(),
     );
   }
 
-  Widget _buildNumPadButton(String value) {
+  Widget _buildNumPadButton(String value, bool isDark) {
     final isBackspace = value == 'back';
 
     return InkWell(
@@ -217,10 +254,12 @@ class _LoginViewState extends State<LoginView> {
         height: 80,
         decoration: BoxDecoration(
           color: isBackspace
-              ? Colors.red.withValues(alpha: 0.1)
-              : Colors.grey[100],
+              ? Colors.red.withValues(alpha: isDark ? 0.2 : 0.1)
+              : (isDark ? AppColors.darkSurfaceVariant : Colors.grey[100]),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(
+            color: isDark ? AppColors.getDivider(isDark) : Colors.grey[300]!,
+          ),
         ),
         child: Center(
           child: isBackspace
@@ -230,7 +269,7 @@ class _LoginViewState extends State<LoginView> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: AppColors.getTextPrimary(isDark),
                   ),
                 ),
         ),
@@ -279,7 +318,7 @@ class _LoginViewState extends State<LoginView> {
     });
   }
 
-  Widget _buildQuickLoginSection() {
+  Widget _buildQuickLoginSection(bool isDark) {
     return Container(
       constraints: BoxConstraints(maxWidth: 450),
       child: Column(
@@ -287,7 +326,7 @@ class _LoginViewState extends State<LoginView> {
           Text(
             'Quick Login',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? AppColors.darkTextPrimary : Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -300,7 +339,7 @@ class _LoginViewState extends State<LoginView> {
               alignment: WrapAlignment.center,
               children: authController.cashiers
                   .where((c) => c.isActive)
-                  .map((cashier) => _buildQuickLoginCard(cashier))
+                  .map((cashier) => _buildQuickLoginCard(cashier, isDark))
                   .toList(),
             );
           }),
@@ -308,7 +347,9 @@ class _LoginViewState extends State<LoginView> {
           Text(
             'Demo PINs: Admin (1234), John (1111), Sarah (2222), Mike (3333)',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : Colors.white.withValues(alpha: 0.7),
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -318,7 +359,9 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Widget _buildQuickLoginCard(cashier) {
+  Widget _buildQuickLoginCard(cashier, bool isDark) {
+    final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -331,21 +374,27 @@ class _LoginViewState extends State<LoginView> {
         width: 100,
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: isDark
+              ? AppColors.darkSurface.withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: isDark
+                ? AppColors.darkSurfaceVariant
+                : Colors.white.withValues(alpha: 0.3),
+          ),
         ),
         child: Column(
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: Colors.white,
+              backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
               child: Text(
                 cashier.name[0],
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: primaryColor,
                 ),
               ),
             ),
@@ -353,7 +402,7 @@ class _LoginViewState extends State<LoginView> {
             Text(
               cashier.name.split(' ')[0],
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? AppColors.darkTextPrimary : Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -363,7 +412,9 @@ class _LoginViewState extends State<LoginView> {
             Text(
               cashier.role.name.toUpperCase(),
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : Colors.white.withValues(alpha: 0.7),
                 fontSize: 10,
               ),
             ),

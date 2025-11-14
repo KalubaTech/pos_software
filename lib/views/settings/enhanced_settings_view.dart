@@ -5,6 +5,7 @@ import 'package:animate_do/animate_do.dart';
 import '../../utils/colors.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/business_settings_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../services/printer_service.dart';
 import '../../services/printer_bluetooth_helper.dart';
 import '../../models/cashier_model.dart';
@@ -37,35 +38,40 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthController>();
+    final appearanceController = Get.find<AppearanceController>();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildSystemSettings(authController),
-                BusinessSettingsView(),
-                AppearanceSettingsView(),
-              ],
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
+
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
+        body: Column(
+          children: [
+            _buildHeader(isDark),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildSystemSettings(authController, isDark),
+                  BusinessSettingsView(),
+                  AppearanceSettingsView(),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.getSurfaceColor(isDark),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -76,19 +82,26 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
         children: [
           Text(
             'Settings',
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
           ),
           SizedBox(height: 8),
           Text(
             'Manage your POS system configuration',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            style: TextStyle(
+              color: AppColors.getTextSecondary(isDark),
+              fontSize: 14,
+            ),
           ),
           SizedBox(height: 24),
           TabBar(
             controller: _tabController,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey[600],
-            indicatorColor: AppColors.primary,
+            labelColor: isDark ? AppColors.darkPrimary : AppColors.primary,
+            unselectedLabelColor: AppColors.getTextSecondary(isDark),
+            indicatorColor: isDark ? AppColors.darkPrimary : AppColors.primary,
             tabs: [
               Tab(icon: Icon(Iconsax.setting_2), text: 'System'),
               Tab(icon: Icon(Iconsax.shop), text: 'Business'),
@@ -100,7 +113,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
     );
   }
 
-  Widget _buildSystemSettings(AuthController authController) {
+  Widget _buildSystemSettings(AuthController authController, bool isDark) {
     PrinterService? printerService;
 
     // Try to get PrinterService if available
@@ -119,8 +132,8 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
           FadeInUp(
             duration: Duration(milliseconds: 400),
             child: printerService != null
-                ? _buildPrinterSection(printerService)
-                : _buildPrinterUnavailableSection(),
+                ? _buildPrinterSection(printerService, isDark)
+                : _buildPrinterUnavailableSection(isDark),
           ),
           SizedBox(height: 24),
 
@@ -129,7 +142,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
             if (authController.hasPermission(UserRole.admin)) {
               return FadeInUp(
                 duration: Duration(milliseconds: 500),
-                child: _buildCashierSection(authController),
+                child: _buildCashierSection(authController, isDark),
               );
             }
             return SizedBox();
@@ -139,11 +152,12 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
     );
   }
 
-  Widget _buildPrinterSection(PrinterService printerService) {
+  Widget _buildPrinterSection(PrinterService printerService, bool isDark) {
     return _buildSectionCard(
       title: 'Printer Configuration',
       icon: Iconsax.printer,
       iconColor: Colors.blue,
+      isDark: isDark,
       children: [
         Obx(() {
           final isConnected = printerService.isConnected.value;
@@ -264,18 +278,19 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
     );
   }
 
-  Widget _buildPrinterUnavailableSection() {
+  Widget _buildPrinterUnavailableSection(bool isDark) {
     final businessController = Get.find<BusinessSettingsController>();
 
     return _buildSectionCard(
       title: 'Printer Configuration',
       icon: Iconsax.printer,
       iconColor: Colors.blue,
+      isDark: isDark,
       children: [
         Obx(() {
           final hasPrinter =
               businessController.receiptPrinterName.value.isNotEmpty;
-
+ 
           return Column(
             children: [
               Container(
@@ -913,14 +928,18 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
     );
   }
 
-  Widget _buildCashierSection(AuthController authController) {
+  Widget _buildCashierSection(AuthController authController, bool isDark) {
     return _buildSectionCard(
       title: 'Cashier Management',
       icon: Iconsax.people,
       iconColor: Colors.purple,
+      isDark: isDark,
       trailing: IconButton(
-        icon: Icon(Iconsax.add_circle, color: AppColors.primary),
-        onPressed: () => _showAddCashierDialog(authController),
+        icon: Icon(
+          Iconsax.add_circle,
+          color: isDark ? AppColors.darkPrimary : AppColors.primary,
+        ),
+        onPressed: () => _showAddCashierDialog(authController, isDark),
         tooltip: 'Add Cashier',
       ),
       children: [
@@ -932,6 +951,8 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
             itemBuilder: (context, index) {
               final cashier = authController.cashiers[index];
               return Card(
+                color: AppColors.getSurfaceColor(isDark),
+                elevation: isDark ? 4 : 1,
                 margin: EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   leading: CircleAvatar(
@@ -945,9 +966,15 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                   ),
                   title: Text(
                     cashier.name,
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
                   ),
-                  subtitle: Text(cashier.role.name.toUpperCase()),
+                  subtitle: Text(
+                    cashier.role.name.toUpperCase(),
+                    style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -975,14 +1002,27 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                       ),
                       SizedBox(width: 8),
                       PopupMenuButton(
-                        icon: Icon(Icons.more_vert),
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        color: AppColors.getSurfaceColor(isDark),
                         itemBuilder: (context) => [
                           PopupMenuItem(
                             child: Row(
                               children: [
-                                Icon(Iconsax.edit, size: 18),
+                                Icon(
+                                  Iconsax.edit,
+                                  size: 18,
+                                  color: AppColors.getTextSecondary(isDark),
+                                ),
                                 SizedBox(width: 8),
-                                Text('Edit'),
+                                Text(
+                                  'Edit',
+                                  style: TextStyle(
+                                    color: AppColors.getTextPrimary(isDark),
+                                  ),
+                                ),
                               ],
                             ),
                             onTap: () => Future.delayed(
@@ -990,6 +1030,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                               () => _showEditCashierDialog(
                                 authController,
                                 cashier,
+                                isDark,
                               ),
                             ),
                           ),
@@ -1041,18 +1082,21 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
     required Color iconColor,
     required List<Widget> children,
     Widget? trailing,
+    bool isDark = false,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.getSurfaceColor(isDark),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1073,14 +1117,18 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
                   ),
                 ),
                 if (trailing != null) trailing,
               ],
             ),
           ),
-          Divider(height: 1),
+          Divider(height: 1, color: AppColors.getDivider(isDark)),
           Padding(
             padding: EdgeInsets.all(16),
             child: Column(children: children),
@@ -1090,13 +1138,14 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
     );
   }
 
-  void _showAddCashierDialog(AuthController authController) {
+  void _showAddCashierDialog(AuthController authController, bool isDark) {
     final nameController = TextEditingController();
     final pinController = TextEditingController();
     UserRole selectedRole = UserRole.cashier;
 
     Get.dialog(
       Dialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           width: 450,
@@ -1110,38 +1159,79 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                   Container(
                     padding: EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color:
+                          (isDark ? AppColors.darkPrimary : AppColors.primary)
+                              .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Iconsax.user_add, color: AppColors.primary),
+                    child: Icon(
+                      Iconsax.user_add,
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
                   ),
                   SizedBox(width: 12),
                   Text(
                     'Add New Cashier',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
                   ),
                 ],
               ),
               SizedBox(height: 24),
               TextField(
                 controller: nameController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Full Name',
-                  prefixIcon: Icon(Iconsax.user),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.user,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.darkSurfaceVariant
+                      : Colors.grey[50],
                 ),
               ),
               SizedBox(height: 16),
               TextField(
                 controller: pinController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'PIN (4 digits)',
-                  prefixIcon: Icon(Iconsax.lock),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.lock,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.darkSurfaceVariant
+                      : Colors.grey[50],
                 ),
                 keyboardType: TextInputType.number,
                 maxLength: 4,
@@ -1151,12 +1241,33 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                 builder: (context, setState) {
                   return DropdownButtonFormField<UserRole>(
                     value: selectedRole,
+                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                    dropdownColor: AppColors.getSurfaceColor(isDark),
                     decoration: InputDecoration(
                       labelText: 'Role',
-                      prefixIcon: Icon(Iconsax.user_tag),
+                      labelStyle: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      prefixIcon: Icon(
+                        Iconsax.user_tag,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppColors.getDivider(isDark),
+                        ),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppColors.getDivider(isDark),
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey[50],
                     ),
                     items: UserRole.values.map((role) {
                       return DropdownMenuItem(
@@ -1178,7 +1289,14 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                 children: [
                   TextButton(
                     onPressed: () => Get.back(),
-                    child: Text('Cancel'),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                      ),
+                    ),
                   ),
                   SizedBox(width: 12),
                   ElevatedButton(
@@ -1213,7 +1331,9 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(
                         horizontal: 24,
@@ -1234,6 +1354,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
   void _showEditCashierDialog(
     AuthController authController,
     CashierModel cashier,
+    bool isDark,
   ) {
     final nameController = TextEditingController(text: cashier.name);
     UserRole selectedRole = cashier.role;
@@ -1241,6 +1362,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
 
     Get.dialog(
       Dialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: StatefulBuilder(
           builder: (context, setState) {
@@ -1256,10 +1378,19 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                       Container(
                         padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color:
+                              (isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary)
+                                  .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Iconsax.edit, color: AppColors.primary),
+                        child: Icon(
+                          Iconsax.edit,
+                          color: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                        ),
                       ),
                       SizedBox(width: 12),
                       Text(
@@ -1267,6 +1398,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(isDark),
                         ),
                       ),
                     ],
@@ -1274,23 +1406,64 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                   SizedBox(height: 24),
                   TextField(
                     controller: nameController,
+                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                     decoration: InputDecoration(
                       labelText: 'Full Name',
-                      prefixIcon: Icon(Iconsax.user),
+                      labelStyle: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      prefixIcon: Icon(
+                        Iconsax.user,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppColors.getDivider(isDark),
+                        ),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppColors.getDivider(isDark),
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey[50],
                     ),
                   ),
                   SizedBox(height: 16),
                   DropdownButtonFormField<UserRole>(
                     value: selectedRole,
+                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                    dropdownColor: AppColors.getSurfaceColor(isDark),
                     decoration: InputDecoration(
                       labelText: 'Role',
-                      prefixIcon: Icon(Iconsax.user_tag),
+                      labelStyle: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      prefixIcon: Icon(
+                        Iconsax.user_tag,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppColors.getDivider(isDark),
+                        ),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: AppColors.getDivider(isDark),
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey[50],
                     ),
                     items: UserRole.values.map((role) {
                       return DropdownMenuItem(
@@ -1306,17 +1479,25 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                   ),
                   SizedBox(height: 16),
                   SwitchListTile(
-                    title: Text('Active Status'),
+                    title: Text(
+                      'Active Status',
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                    ),
                     subtitle: Text(
                       isActive
                           ? 'This cashier can log in'
                           : 'This cashier cannot log in',
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                     ),
                     value: isActive,
                     onChanged: (value) {
                       setState(() => isActive = value);
                     },
-                    activeColor: AppColors.primary,
+                    activeColor: isDark
+                        ? AppColors.darkPrimary
+                        : AppColors.primary,
                   ),
                   SizedBox(height: 24),
                   Row(
@@ -1324,7 +1505,14 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                     children: [
                       TextButton(
                         onPressed: () => Get.back(),
-                        child: Text('Cancel'),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                          ),
+                        ),
                       ),
                       SizedBox(width: 12),
                       ElevatedButton(
@@ -1346,7 +1534,9 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(
                             horizontal: 24,

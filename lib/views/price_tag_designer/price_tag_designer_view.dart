@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../controllers/price_tag_designer_controller.dart';
 import '../../controllers/product_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../models/price_tag_template_model.dart';
 import '../../utils/colors.dart';
 import 'widgets/canvas_widget.dart';
@@ -19,217 +20,281 @@ class PriceTagDesignerView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(PriceTagDesignerController());
     final productController = Get.find<ProductController>();
+    final appearanceController = Get.find<AppearanceController>();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Column(
-        children: [
-          // Top App Bar
-          Container(
-            height: 60,
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(Iconsax.tag, color: AppColors.primary, size: 28),
-                SizedBox(width: 12),
-                Text(
-                  'Price Tag Designer',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
+
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[100],
+        body: Column(
+          children: [
+            // Top App Bar
+            Container(
+              height: 60,
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.getSurfaceColor(isDark),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
                   ),
+                ],
+                border: BorderDirectional(
+                  bottom: BorderSide(color: AppColors.getDivider(isDark)),
                 ),
-                Spacer(),
-                // Template selector
-                Obx(() {
-                  final template = controller.currentTemplate.value;
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButton<PriceTagTemplate?>(
-                      value: template,
-                      hint: Text('Select Template'),
-                      underline: SizedBox(),
-                      items: controller.templates.map((t) {
-                        return DropdownMenuItem(value: t, child: Text(t.name));
-                      }).toList(),
-                      onChanged: (template) {
-                        if (template != null) {
-                          controller.selectTemplate(template);
-                        }
-                      },
-                    ),
-                  );
-                }),
-                SizedBox(width: 12),
-                // New template button
-                ElevatedButton.icon(
-                  onPressed: () => _showNewTemplateDialog(context, controller),
-                  icon: Icon(Iconsax.add, size: 18),
-                  label: Text('New Template'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Iconsax.tag,
+                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    size: 28,
                   ),
-                ),
-                SizedBox(width: 12),
-                // Save button
-                Obx(() {
-                  final hasTemplate = controller.currentTemplate.value != null;
-                  return ElevatedButton.icon(
-                    onPressed: hasTemplate
-                        ? () => controller.saveCurrentTemplate()
-                        : null,
-                    icon: Icon(Iconsax.save_2, size: 18),
-                    label: Text('Save'),
+                  SizedBox(width: 12),
+                  Text(
+                    'Price Tag Designer',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
+                  ),
+                  Spacer(),
+                  // Template selector
+                  Obx(() {
+                    final template = controller.currentTemplate.value;
+                    return Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                        border: isDark
+                            ? Border.all(color: AppColors.getDivider(isDark))
+                            : null,
+                      ),
+                      child: DropdownButton<PriceTagTemplate?>(
+                        value: template,
+                        hint: Text(
+                          'Select Template',
+                          style: TextStyle(
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                        underline: SizedBox(),
+                        dropdownColor: AppColors.getSurfaceColor(isDark),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        items: controller.templates.map((t) {
+                          return DropdownMenuItem(
+                            value: t,
+                            child: Text(t.name, style: TextStyle(fontSize: 12)),
+                          );
+                        }).toList(),
+                        onChanged: (template) {
+                          if (template != null) {
+                            controller.selectTemplate(template);
+                          }
+                        },
+                      ),
+                    );
+                  }),
+                  SizedBox(width: 12),
+                  // New template button
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        _showNewTemplateDialog(context, controller, isDark),
+                    icon: Icon(Iconsax.add, size: 18),
+                    label: Text('New Template'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                     ),
-                  );
-                }),
-                SizedBox(width: 12),
-                // Printer settings button
-                IconButton(
-                  icon: Icon(Iconsax.setting_2, size: 20),
-                  tooltip: 'Printer Settings',
-                  onPressed: () {
-                    Get.dialog(PrinterManagementDialog());
-                  },
-                ),
-                SizedBox(width: 12),
-                // Print button
-                Obx(() {
-                  final hasTemplate = controller.currentTemplate.value != null;
-                  return ElevatedButton.icon(
-                    onPressed: hasTemplate
-                        ? () => _showPrintDialog(
-                            context,
-                            controller,
-                            productController,
-                          )
-                        : null,
-                    icon: Icon(Iconsax.printer, size: 18),
-                    label: Text('Print'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-          // Main Content
-          Expanded(
-            child: Row(
-              children: [
-                // Left Sidebar - Templates
-                Obx(() {
-                  if (controller.isTemplateListCollapsed.value) {
-                    return Container(
-                      width: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border(
-                          right: BorderSide(color: Colors.grey[300]!),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          IconButton(
-                            icon: Icon(Iconsax.arrow_right_3),
-                            tooltip: 'Show Templates',
-                            onPressed: () => controller.toggleTemplateList(),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return Row(
-                    children: [
-                      TemplateListWidget(),
-                      Container(width: 1, color: Colors.grey[300]),
-                    ],
-                  );
-                }),
-                // Center - Canvas
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    children: [
-                      // Toolbar
-                      ToolbarWidget(),
-                      // Canvas
-                      Expanded(
-                          child: CanvasWidget()
-                      ),
-                    ],
                   ),
-                ),
-                // Right Sidebar - Properties
-                Obx(() {
-                  if (controller.isPropertiesPanelCollapsed.value) {
-                    return Container(
-                      width: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border(
-                          left: BorderSide(color: Colors.grey[300]!),
+                  SizedBox(width: 12),
+                  // Save button
+                  Obx(() {
+                    final hasTemplate =
+                        controller.currentTemplate.value != null;
+                    return ElevatedButton.icon(
+                      onPressed: hasTemplate
+                          ? () => controller.saveCurrentTemplate()
+                          : null,
+                      icon: Icon(Iconsax.save_2, size: 18),
+                      label: Text('Save'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[300],
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          IconButton(
-                            icon: Icon(Iconsax.arrow_left_3),
-                            tooltip: 'Show Properties',
-                            onPressed: () => controller.togglePropertiesPanel(),
-                          ),
-                        ],
+                    );
+                  }),
+                  SizedBox(width: 12),
+                  // Printer settings button
+                  IconButton(
+                    icon: Icon(
+                      Iconsax.setting_2,
+                      size: 20,
+                      color: AppColors.getTextSecondary(isDark),
+                    ),
+                    tooltip: 'Printer Settings',
+                    onPressed: () {
+                      Get.dialog(PrinterManagementDialog());
+                    },
+                  ),
+                  SizedBox(width: 12),
+                  // Print button
+                  Obx(() {
+                    final hasTemplate =
+                        controller.currentTemplate.value != null;
+                    return ElevatedButton.icon(
+                      onPressed: hasTemplate
+                          ? () => _showPrintDialog(
+                              context,
+                              controller,
+                              productController,
+                            )
+                          : null,
+                      icon: Icon(Iconsax.printer, size: 18),
+                      label: Text('Print'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[300],
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     );
-                  }
-                  return Row(
-                    children: [
-                      Container(width: 1, color: Colors.grey[300]),
-                      PropertiesPanelWidget(),
-                    ],
-                  );
-                }),
-              ],
+                  }),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+            // Main Content
+            Expanded(
+              child: Row(
+                children: [
+                  // Left Sidebar - Templates
+                  Obx(() {
+                    if (controller.isTemplateListCollapsed.value) {
+                      return Container(
+                        width: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.getSurfaceColor(isDark),
+                          border: Border(
+                            right: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                Iconsax.arrow_right_3,
+                                color: AppColors.getTextSecondary(isDark),
+                              ),
+                              tooltip: 'Show Templates',
+                              onPressed: () => controller.toggleTemplateList(),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return Row(
+                      children: [
+                        TemplateListWidget(),
+                        Container(
+                          width: 1,
+                          color: AppColors.getDivider(isDark),
+                        ),
+                      ],
+                    );
+                  }),
+                  // Center - Canvas
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      children: [
+                        // Toolbar
+                        ToolbarWidget(),
+                        // Canvas
+                        Expanded(child: CanvasWidget()),
+                      ],
+                    ),
+                  ),
+                  // Right Sidebar - Properties
+                  Obx(() {
+                    if (controller.isPropertiesPanelCollapsed.value) {
+                      return Container(
+                        width: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.getSurfaceColor(isDark),
+                          border: Border(
+                            left: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                Iconsax.arrow_left_3,
+                                color: AppColors.getTextSecondary(isDark),
+                              ),
+                              tooltip: 'Show Properties',
+                              onPressed: () =>
+                                  controller.togglePropertiesPanel(),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Container(
+                          width: 1,
+                          color: AppColors.getDivider(isDark),
+                        ),
+                        PropertiesPanelWidget(),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   void _showNewTemplateDialog(
     BuildContext context,
     PriceTagDesignerController controller,
+    bool isDark,
   ) {
     final nameController = TextEditingController();
     final widthController = TextEditingController(text: '50');
@@ -237,11 +302,18 @@ class PriceTagDesignerView extends StatelessWidget {
 
     Get.dialog(
       AlertDialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
         title: Row(
           children: [
-            Icon(Iconsax.add_square, color: AppColors.primary),
+            Icon(
+              Iconsax.add_square,
+              color: isDark ? AppColors.darkPrimary : AppColors.primary,
+            ),
             SizedBox(width: 12),
-            Text('New Template'),
+            Text(
+              'New Template',
+              style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+            ),
           ],
         ),
         content: Container(
@@ -252,10 +324,31 @@ class PriceTagDesignerView extends StatelessWidget {
             children: [
               TextField(
                 controller: nameController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Template Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Iconsax.document_text),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.document_text,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? AppColors.darkSurfaceVariant
+                      : Colors.grey[50],
                 ),
               ),
               SizedBox(height: 16),
@@ -265,10 +358,37 @@ class PriceTagDesignerView extends StatelessWidget {
                     child: TextField(
                       controller: widthController,
                       keyboardType: TextInputType.number,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                       decoration: InputDecoration(
                         labelText: 'Width (mm)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Iconsax.maximize_4),
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.maximize_4,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                     ),
                   ),
@@ -277,10 +397,37 @@ class PriceTagDesignerView extends StatelessWidget {
                     child: TextField(
                       controller: heightController,
                       keyboardType: TextInputType.number,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                       decoration: InputDecoration(
                         labelText: 'Height (mm)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Iconsax.maximize_4),
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.maximize_4,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                     ),
                   ),
@@ -289,7 +436,11 @@ class PriceTagDesignerView extends StatelessWidget {
               SizedBox(height: 16),
               Text(
                 'Common Sizes:',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               SizedBox(height: 8),
               Wrap(
@@ -298,22 +449,28 @@ class PriceTagDesignerView extends StatelessWidget {
                   _buildSizeChip('50×30mm', () {
                     widthController.text = '50';
                     heightController.text = '30';
-                  }),
+                  }, isDark),
                   _buildSizeChip('70×40mm', () {
                     widthController.text = '70';
                     heightController.text = '40';
-                  }),
+                  }, isDark),
                   _buildSizeChip('100×60mm', () {
                     widthController.text = '100';
                     heightController.text = '60';
-                  }),
+                  }, isDark),
                 ],
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+            ),
+          ),
           ElevatedButton(
             onPressed: () {
               final name = nameController.text.trim();
@@ -330,7 +487,9 @@ class PriceTagDesignerView extends StatelessWidget {
               Get.snackbar('Success', 'Template created successfully');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: isDark
+                  ? AppColors.darkPrimary
+                  : AppColors.primary,
               foregroundColor: Colors.white,
             ),
             child: Text('Create'),
@@ -340,12 +499,23 @@ class PriceTagDesignerView extends StatelessWidget {
     );
   }
 
-  Widget _buildSizeChip(String label, VoidCallback onTap) {
+  Widget _buildSizeChip(String label, VoidCallback onTap, bool isDark) {
     return InkWell(
       onTap: onTap,
       child: Chip(
-        label: Text(label, style: TextStyle(fontSize: 11)),
-        backgroundColor: Colors.blue[50],
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: AppColors.getTextPrimary(isDark),
+          ),
+        ),
+        backgroundColor: isDark
+            ? AppColors.darkPrimary.withOpacity(0.2)
+            : Colors.blue[50],
+        side: isDark
+            ? BorderSide(color: AppColors.darkPrimary.withOpacity(0.3))
+            : BorderSide.none,
         padding: EdgeInsets.symmetric(horizontal: 4),
       ),
     );

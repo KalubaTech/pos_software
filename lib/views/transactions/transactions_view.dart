@@ -5,6 +5,7 @@ import '../../controllers/cart_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/customer_controller.dart';
 import '../../controllers/business_settings_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../components/dialogs/enhanced_checkout_dialog.dart';
@@ -20,39 +21,47 @@ class TransactionsView extends StatelessWidget {
     final cartController = Get.put(CartController());
     final productController = Get.put(ProductController());
     final customerController = Get.put(CustomerController());
+    final appearanceController = Get.find<AppearanceController>();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Row(
-        children: [
-          // Products Section
-          Expanded(
-            flex: 2,
-            child: _buildProductsSection(
-              context,
-              productController,
-              cartController,
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
+
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[100],
+        body: Row(
+          children: [
+            // Products Section
+            Expanded(
+              flex: 2,
+              child: _buildProductsSection(
+                context,
+                productController,
+                cartController,
+                isDark,
+              ),
             ),
-          ),
-          // Cart Section
-          Container(
-            width: 400,
-            color: Colors.white,
-            child: _buildCartSection(
-              context,
-              cartController,
-              customerController,
+            // Cart Section
+            Container(
+              width: 400,
+              color: AppColors.getSurfaceColor(isDark),
+              child: _buildCartSection(
+                context,
+                cartController,
+                customerController,
+                isDark,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildProductsSection(
     BuildContext context,
     ProductController productController,
     CartController cartController,
+    bool isDark,
   ) {
     final barcodeScanner = Get.put(BarcodeScannerService());
 
@@ -66,7 +75,7 @@ class TransactionsView extends StatelessWidget {
                 horizontal: 24.0,
                 vertical: 20.0,
               ),
-              color: Colors.white,
+              color: AppColors.getSurfaceColor(isDark),
               width: double.infinity,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,21 +84,26 @@ class TransactionsView extends StatelessWidget {
                     'Point of Sale',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: AppColors.getTextPrimary(isDark),
                     ),
                   ),
                   const SizedBox(height: 16),
                   // Search Bar
                   TextField(
+                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                     decoration: InputDecoration(
                       hintText: 'Search products by name or SKU...',
-                      hintStyle: TextStyle(color: Colors.grey.shade500),
+                      hintStyle: TextStyle(
+                        color: AppColors.getTextTertiary(isDark),
+                      ),
                       prefixIcon: Icon(
                         Iconsax.search_normal_1,
-                        color: Colors.grey.shade600,
+                        color: AppColors.getTextSecondary(isDark),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.shade100,
+                      fillColor: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey.shade100,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -137,21 +151,29 @@ class TransactionsView extends StatelessWidget {
                                   productController.filterByCategory(category);
                                 }
                               },
-                              backgroundColor: Colors.grey.shade200,
-                              selectedColor: AppColors.primary.withOpacity(
-                                0.15,
-                              ),
+                              backgroundColor: isDark
+                                  ? AppColors.darkSurfaceVariant
+                                  : Colors.grey.shade200,
+                              selectedColor:
+                                  (isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.primary)
+                                      .withOpacity(isDark ? 0.25 : 0.15),
                               labelStyle: TextStyle(
                                 color: isSelected
-                                    ? AppColors.primary
-                                    : Colors.black54,
+                                    ? (isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.primary)
+                                    : AppColors.getTextSecondary(isDark),
                                 fontWeight: FontWeight.w600,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 side: BorderSide(
                                   color: isSelected
-                                      ? AppColors.primary
+                                      ? (isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary)
                                       : Colors.transparent,
                                 ),
                               ),
@@ -172,11 +194,22 @@ class TransactionsView extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (productController.isLoading.value) {
-                  return Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  );
                 }
 
                 if (productController.filteredProducts.isEmpty) {
-                  return Center(child: Text('No products found'));
+                  return Center(
+                    child: Text(
+                      'No products found',
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                  );
                 }
 
                 return GridView.builder(
@@ -190,7 +223,7 @@ class TransactionsView extends StatelessWidget {
                   itemCount: productController.filteredProducts.length,
                   itemBuilder: (context, index) {
                     final product = productController.filteredProducts[index];
-                    return _buildProductCard(product, cartController);
+                    return _buildProductCard(product, cartController, isDark);
                   },
                 );
               }),
@@ -214,8 +247,12 @@ class TransactionsView extends StatelessWidget {
                     'Product Added',
                     '${product.name} added to cart',
                     snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.green,
-                    colorText: Colors.white,
+                    backgroundColor: isDark
+                        ? AppColors.darkSecondary.withOpacity(0.9)
+                        : Colors.green,
+                    colorText: isDark
+                        ? AppColors.darkTextPrimary
+                        : Colors.white,
                     duration: Duration(seconds: 2),
                   );
                 } else {
@@ -229,7 +266,7 @@ class TransactionsView extends StatelessWidget {
                 }
               }
             },
-            backgroundColor: AppColors.primary,
+            backgroundColor: isDark ? AppColors.darkPrimary : AppColors.primary,
             icon: Icon(Iconsax.scan_barcode, color: Colors.white),
             label: Text(
               'Scan Barcode',
@@ -244,13 +281,21 @@ class TransactionsView extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(product, CartController cartController) {
+  Widget _buildProductCard(
+    product,
+    CartController cartController,
+    bool isDark,
+  ) {
     final hasVariants =
         product.variants != null && product.variants!.isNotEmpty;
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: isDark ? 4 : 2,
+      color: AppColors.getSurfaceColor(isDark),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppColors.getDivider(isDark), width: 1),
+      ),
       child: InkWell(
         onTap: () {
           if (hasVariants) {
@@ -295,6 +340,7 @@ class TransactionsView extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
+                          color: AppColors.getTextPrimary(isDark),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -302,7 +348,10 @@ class TransactionsView extends StatelessWidget {
                       SizedBox(height: 4),
                       Text(
                         product.category,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
                       ),
                       SizedBox(height: 8),
                       Obx(
@@ -311,7 +360,9 @@ class TransactionsView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
                           ),
                         ),
                       ),
@@ -328,7 +379,7 @@ class TransactionsView extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -351,10 +402,13 @@ class TransactionsView extends StatelessWidget {
     BuildContext context,
     CartController cartController,
     CustomerController customerController,
+    bool isDark,
   ) {
     return Container(
       decoration: BoxDecoration(
-        border: BorderDirectional(start: BorderSide(color: Colors.grey[300]!)),
+        border: BorderDirectional(
+          start: BorderSide(color: AppColors.getDivider(isDark)),
+        ),
       ),
       child: Column(
         children: [
@@ -362,7 +416,9 @@ class TransactionsView extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+              border: Border(
+                bottom: BorderSide(color: AppColors.getDivider(isDark)),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +427,7 @@ class TransactionsView extends StatelessWidget {
                   'Customer',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: AppColors.getTextSecondary(isDark),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -383,6 +439,7 @@ class TransactionsView extends StatelessWidget {
                     onTap: () => _showCustomerSelector(
                       customerController,
                       cartController,
+                      isDark,
                     ),
                     child: Container(
                       padding: EdgeInsets.symmetric(
@@ -390,22 +447,36 @@ class TransactionsView extends StatelessWidget {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(color: AppColors.getDivider(isDark)),
                         borderRadius: BorderRadius.circular(8),
+                        color: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                       child: Row(
                         children: [
-                          Icon(Iconsax.user, size: 20),
+                          Icon(
+                            Iconsax.user,
+                            size: 20,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               hasCustomer
                                   ? cartController.selectedCustomerName.value
                                   : 'Walk-in Customer',
-                              style: TextStyle(fontSize: 14),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.getTextPrimary(isDark),
+                              ),
                             ),
                           ),
-                          Icon(Iconsax.arrow_down_1, size: 16),
+                          Icon(
+                            Iconsax.arrow_down_1,
+                            size: 16,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
                         ],
                       ),
                     ),
@@ -425,12 +496,15 @@ class TransactionsView extends StatelessWidget {
                       Icon(
                         Iconsax.shopping_cart,
                         size: 64,
-                        color: Colors.grey[400],
+                        color: AppColors.getTextTertiary(isDark),
                       ),
                       SizedBox(height: 16),
                       Text(
                         'Cart is empty',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
                       ),
                     ],
                   ),
@@ -442,7 +516,7 @@ class TransactionsView extends StatelessWidget {
                 itemCount: cartController.cartItems.length,
                 itemBuilder: (context, index) {
                   final item = cartController.cartItems[index];
-                  return _buildCartItem(item, cartController);
+                  return _buildCartItem(item, cartController, isDark);
                 },
               );
             }),
@@ -451,8 +525,10 @@ class TransactionsView extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
-              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+              color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
+              border: Border(
+                top: BorderSide(color: AppColors.getDivider(isDark)),
+              ),
             ),
             child: Column(
               children: [
@@ -460,6 +536,7 @@ class TransactionsView extends StatelessWidget {
                   () => _buildSummaryRow(
                     'Subtotal',
                     CurrencyFormatter.format(cartController.subtotal),
+                    isDark,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -467,6 +544,7 @@ class TransactionsView extends StatelessWidget {
                   () => _buildSummaryRow(
                     'Tax (8%)',
                     CurrencyFormatter.format(cartController.tax),
+                    isDark,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -474,13 +552,15 @@ class TransactionsView extends StatelessWidget {
                   () => _buildSummaryRow(
                     'Discount',
                     '-${CurrencyFormatter.format(cartController.discount.value)}',
+                    isDark,
                   ),
                 ),
-                Divider(height: 24),
+                Divider(height: 24, color: AppColors.getDivider(isDark)),
                 Obx(
                   () => _buildSummaryRow(
                     'Total',
                     CurrencyFormatter.format(cartController.total),
+                    isDark,
                     large: true,
                   ),
                 ),
@@ -492,6 +572,8 @@ class TransactionsView extends StatelessWidget {
                         onPressed: () => cartController.clearCart(),
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: AppColors.getDivider(isDark)),
+                          foregroundColor: AppColors.getTextPrimary(isDark),
                         ),
                         child: Text('Clear'),
                       ),
@@ -514,7 +596,12 @@ class TransactionsView extends StatelessWidget {
                                 },
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                            disabledBackgroundColor: AppColors.getTextTertiary(
+                              isDark,
+                            ),
                           ),
                           child: Text(
                             'Checkout',
@@ -537,9 +624,15 @@ class TransactionsView extends StatelessWidget {
     );
   }
 
-  Widget _buildCartItem(item, CartController cartController) {
+  Widget _buildCartItem(item, CartController cartController, bool isDark) {
     return Card(
       margin: EdgeInsets.only(bottom: 12),
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 2 : 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: AppColors.getDivider(isDark), width: 1),
+      ),
       child: Padding(
         padding: EdgeInsets.all(12),
         child: Row(
@@ -562,7 +655,11 @@ class TransactionsView extends StatelessWidget {
                 children: [
                   Text(
                     item.displayName, // Shows product name with variant
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -571,7 +668,10 @@ class TransactionsView extends StatelessWidget {
                       CurrencyFormatter.format(
                         item.unitPrice,
                       ), // Use unitPrice which includes variant
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                   if (item.selectedVariant != null)
@@ -579,14 +679,18 @@ class TransactionsView extends StatelessWidget {
                       margin: EdgeInsets.only(top: 4),
                       padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color:
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withValues(alpha: isDark ? 0.25 : 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         item.selectedVariant!.attributeType,
                         style: TextStyle(
                           fontSize: 10,
-                          color: AppColors.primary,
+                          color: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -597,7 +701,11 @@ class TransactionsView extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  icon: Icon(Iconsax.minus_cirlce, size: 20),
+                  icon: Icon(
+                    Iconsax.minus_cirlce,
+                    size: 20,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   onPressed: () => cartController.updateQuantity(
                     item.product.id,
                     item.quantity - 1,
@@ -610,11 +718,19 @@ class TransactionsView extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     '${item.quantity}',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Iconsax.add_circle, size: 20),
+                  icon: Icon(
+                    Iconsax.add_circle,
+                    size: 20,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   onPressed: () => cartController.updateQuantity(
                     item.product.id,
                     item.quantity + 1,
@@ -631,7 +747,12 @@ class TransactionsView extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool large = false}) {
+  Widget _buildSummaryRow(
+    String label,
+    String value,
+    bool isDark, {
+    bool large = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -640,7 +761,7 @@ class TransactionsView extends StatelessWidget {
           style: TextStyle(
             fontSize: large ? 18 : 14,
             fontWeight: large ? FontWeight.bold : FontWeight.normal,
-            color: Colors.black87,
+            color: AppColors.getTextPrimary(isDark),
           ),
         ),
         Text(
@@ -648,7 +769,9 @@ class TransactionsView extends StatelessWidget {
           style: TextStyle(
             fontSize: large ? 20 : 14,
             fontWeight: large ? FontWeight.bold : FontWeight.w600,
-            color: large ? AppColors.primary : Colors.black87,
+            color: large
+                ? (isDark ? AppColors.darkPrimary : AppColors.primary)
+                : AppColors.getTextPrimary(isDark),
           ),
         ),
       ],
@@ -658,9 +781,11 @@ class TransactionsView extends StatelessWidget {
   void _showCustomerSelector(
     CustomerController customerController,
     CartController cartController,
+    bool isDark,
   ) {
     Get.dialog(
       Dialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
         child: Container(
           width: 500,
           padding: EdgeInsets.all(24),
@@ -670,14 +795,35 @@ class TransactionsView extends StatelessWidget {
             children: [
               Text(
                 'Select Customer',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               SizedBox(height: 16),
               TextField(
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   hintText: 'Search customers...',
-                  prefixIcon: Icon(Iconsax.search_normal),
-                  border: OutlineInputBorder(),
+                  hintStyle: TextStyle(
+                    color: AppColors.getTextTertiary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.search_normal,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
                 onChanged: customerController.searchCustomers,
               ),
@@ -690,8 +836,16 @@ class TransactionsView extends StatelessWidget {
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return ListTile(
-                          leading: Icon(Iconsax.user),
-                          title: Text('Walk-in Customer'),
+                          leading: Icon(
+                            Iconsax.user,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          title: Text(
+                            'Walk-in Customer',
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(isDark),
+                            ),
+                          ),
                           onTap: () {
                             cartController.setCustomer('', '');
                             Get.back();
@@ -703,10 +857,33 @@ class TransactionsView extends StatelessWidget {
                           customerController.filteredCustomers[index - 1];
                       return ListTile(
                         leading: CircleAvatar(
-                          child: Text(customer.name[0].toUpperCase()),
+                          backgroundColor:
+                              (isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary)
+                                  .withOpacity(isDark ? 0.25 : 0.1),
+                          child: Text(
+                            customer.name[0].toUpperCase(),
+                            style: TextStyle(
+                              color: isDark
+                                  ? AppColors.darkPrimary
+                                  : AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        title: Text(customer.name),
-                        subtitle: Text(customer.email),
+                        title: Text(
+                          customer.name,
+                          style: TextStyle(
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                        ),
+                        subtitle: Text(
+                          customer.email,
+                          style: TextStyle(
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
                         onTap: () {
                           cartController.setCustomer(
                             customer.id,
@@ -724,7 +901,10 @@ class TransactionsView extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => Get.back(),
-                  child: Text('Cancel'),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+                  ),
                 ),
               ),
             ],

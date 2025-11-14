@@ -99,6 +99,9 @@ class PriceTagElement {
   final int zIndex; // Stacking order (higher = on top)
   final String? barcodeData; // Data for barcode/QR code
   final String barcodeType; // Type of barcode (code128, qr, ean13, etc.)
+  final String?
+  productFieldLink; // Product field to link barcode to (e.g., 'barcode', 'sku')
+  final String? linkedProductId; // ID of the product to update when printing
 
   PriceTagElement({
     required this.id,
@@ -123,6 +126,8 @@ class PriceTagElement {
     this.zIndex = 0,
     this.barcodeData,
     this.barcodeType = 'code128',
+    this.productFieldLink, // New field for product association
+    this.linkedProductId, // New field for specific product ID
   });
 
   Map<String, dynamic> toJson() {
@@ -149,6 +154,8 @@ class PriceTagElement {
       'zIndex': zIndex,
       'barcodeData': barcodeData,
       'barcodeType': barcodeType,
+      'productFieldLink': productFieldLink,
+      'linkedProductId': linkedProductId,
     };
   }
 
@@ -178,6 +185,8 @@ class PriceTagElement {
       zIndex: json['zIndex'] ?? 0,
       barcodeData: json['barcodeData'],
       barcodeType: json['barcodeType'] ?? 'code128',
+      productFieldLink: json['productFieldLink'],
+      linkedProductId: json['linkedProductId'],
     );
   }
 
@@ -204,6 +213,8 @@ class PriceTagElement {
     int? zIndex,
     String? barcodeData,
     String? barcodeType,
+    String? productFieldLink,
+    String? linkedProductId,
   }) {
     return PriceTagElement(
       id: id ?? this.id,
@@ -228,6 +239,8 @@ class PriceTagElement {
       zIndex: zIndex ?? this.zIndex,
       barcodeData: barcodeData ?? this.barcodeData,
       barcodeType: barcodeType ?? this.barcodeType,
+      productFieldLink: productFieldLink ?? this.productFieldLink,
+      linkedProductId: linkedProductId ?? this.linkedProductId,
     );
   }
 }

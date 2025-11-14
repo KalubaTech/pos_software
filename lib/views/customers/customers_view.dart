@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../controllers/customer_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../models/client_model.dart';
 import '../../utils/colors.dart';
 
@@ -11,40 +12,50 @@ class CustomersView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(CustomerController());
+    final appearanceController = Get.find<AppearanceController>();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Column(
-        children: [
-          _buildHeader(controller),
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return Center(child: CircularProgressIndicator());
-              }
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
 
-              if (controller.filteredCustomers.isEmpty) {
-                return _buildEmptyState(controller);
-              }
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[100],
+        body: Column(
+          children: [
+            _buildHeader(controller, isDark),
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-              return _buildCustomersList(controller);
-            }),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddCustomerDialog(controller),
-        backgroundColor: AppColors.primary,
-        icon: Icon(Iconsax.add),
-        label: Text('Add Customer'),
-      ),
-    );
+                if (controller.filteredCustomers.isEmpty) {
+                  return _buildEmptyState(controller, isDark);
+                }
+
+                return _buildCustomersList(controller, isDark);
+              }),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showAddCustomerDialog(controller, isDark),
+          backgroundColor: isDark ? AppColors.darkPrimary : AppColors.primary,
+          icon: Icon(Iconsax.add),
+          label: Text('Add Customer'),
+        ),
+      );
+    });
   }
 
-  Widget _buildHeader(CustomerController controller) {
+  Widget _buildHeader(CustomerController controller, bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppColors.getSurfaceColor(isDark),
+        border: Border(
+          bottom: BorderSide(color: AppColors.getDivider(isDark), width: 1),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -53,26 +64,65 @@ class CustomersView extends StatelessWidget {
             children: [
               Text(
                 'Customers',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               Obx(
-                () => Text(
-                  '${controller.filteredCustomers.length} customers',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                () => Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                        .withOpacity(isDark ? 0.2 : 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color:
+                          (isDark ? AppColors.darkPrimary : AppColors.primary)
+                              .withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '${controller.filteredCustomers.length} customers',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
           SizedBox(height: 16),
           TextField(
+            style: TextStyle(color: AppColors.getTextPrimary(isDark)),
             decoration: InputDecoration(
               hintText: 'Search customers by name, email, or phone...',
-              prefixIcon: Icon(Iconsax.search_normal),
+              hintStyle: TextStyle(color: AppColors.getTextTertiary(isDark)),
+              prefixIcon: Icon(
+                Iconsax.search_normal,
+                color: AppColors.getTextSecondary(isDark),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
               ),
               filled: true,
-              fillColor: Colors.grey[100],
+              fillColor: isDark
+                  ? AppColors.darkSurfaceVariant
+                  : Colors.grey[100],
             ),
             onChanged: controller.searchCustomers,
           ),
@@ -81,28 +131,35 @@ class CustomersView extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(CustomerController controller) {
+  Widget _buildEmptyState(CustomerController controller, bool isDark) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Iconsax.profile_2user, size: 80, color: Colors.grey[400]),
+          Icon(
+            Iconsax.profile_2user,
+            size: 80,
+            color: AppColors.getTextTertiary(isDark),
+          ),
           SizedBox(height: 16),
           Text(
             'No customers found',
-            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 18,
+              color: AppColors.getTextSecondary(isDark),
+            ),
           ),
           SizedBox(height: 8),
           Text(
             'Add your first customer to get started',
-            style: TextStyle(color: Colors.grey[500]),
+            style: TextStyle(color: AppColors.getTextTertiary(isDark)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCustomersList(CustomerController controller) {
+  Widget _buildCustomersList(CustomerController controller, bool isDark) {
     return ListView.builder(
       padding: EdgeInsets.all(24),
       itemCount: controller.filteredCustomers.length,
@@ -110,23 +167,35 @@ class CustomersView extends StatelessWidget {
         final customer = controller.filteredCustomers[index];
         return Card(
           margin: EdgeInsets.only(bottom: 12),
+          color: AppColors.getSurfaceColor(isDark),
+          elevation: isDark ? 4 : 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: AppColors.getDivider(isDark), width: 1),
+          ),
           child: ListTile(
             contentPadding: EdgeInsets.all(16),
             leading: CircleAvatar(
               radius: 28,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor:
+                  (isDark ? AppColors.darkPrimary : AppColors.primary)
+                      .withOpacity(isDark ? 0.25 : 0.1),
               child: Text(
                 customer.name[0].toUpperCase(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
                 ),
               ),
             ),
             title: Text(
               customer.name,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: AppColors.getTextPrimary(isDark),
+              ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,35 +203,66 @@ class CustomersView extends StatelessWidget {
                 SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Iconsax.sms, size: 14, color: Colors.grey[600]),
+                    Icon(
+                      Iconsax.sms,
+                      size: 14,
+                      color: AppColors.getTextSecondary(isDark),
+                    ),
                     SizedBox(width: 6),
-                    Text(customer.email),
+                    Text(
+                      customer.email,
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
                   ],
                 ),
                 SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Iconsax.call, size: 14, color: Colors.grey[600]),
+                    Icon(
+                      Iconsax.call,
+                      size: 14,
+                      color: AppColors.getTextSecondary(isDark),
+                    ),
                     SizedBox(width: 6),
-                    Text(customer.phoneNumber),
+                    Text(
+                      customer.phoneNumber,
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
             trailing: PopupMenuButton(
-              icon: Icon(Iconsax.more),
+              icon: Icon(
+                Iconsax.more,
+                color: AppColors.getTextSecondary(isDark),
+              ),
+              color: AppColors.getSurfaceColor(isDark),
               itemBuilder: (context) => [
                 PopupMenuItem(
                   child: Row(
                     children: [
-                      Icon(Iconsax.edit, size: 18),
+                      Icon(
+                        Iconsax.edit,
+                        size: 18,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
                       SizedBox(width: 8),
-                      Text('Edit'),
+                      Text(
+                        'Edit',
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                      ),
                     ],
                   ),
                   onTap: () => Future.delayed(
                     Duration.zero,
-                    () => _showEditCustomerDialog(controller, customer),
+                    () => _showEditCustomerDialog(controller, customer, isDark),
                   ),
                 ),
                 PopupMenuItem(
@@ -175,7 +275,7 @@ class CustomersView extends StatelessWidget {
                   ),
                   onTap: () => Future.delayed(
                     Duration.zero,
-                    () => _showDeleteConfirmation(controller, customer),
+                    () => _showDeleteConfirmation(controller, customer, isDark),
                   ),
                 ),
               ],
@@ -186,13 +286,14 @@ class CustomersView extends StatelessWidget {
     );
   }
 
-  void _showAddCustomerDialog(CustomerController controller) {
+  void _showAddCustomerDialog(CustomerController controller, bool isDark) {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
 
     Get.dialog(
       Dialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
         child: Container(
           width: 500,
           padding: EdgeInsets.all(24),
@@ -202,34 +303,89 @@ class CustomersView extends StatelessWidget {
             children: [
               Text(
                 'Add New Customer',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               SizedBox(height: 24),
               TextField(
                 controller: nameController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Name',
-                  prefixIcon: Icon(Iconsax.user),
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.user,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 16),
               TextField(
                 controller: emailController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Iconsax.sms),
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.sms,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               SizedBox(height: 16),
               TextField(
                 controller: phoneController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Phone Number',
-                  prefixIcon: Icon(Iconsax.call),
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.call,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -239,7 +395,12 @@ class CustomersView extends StatelessWidget {
                 children: [
                   TextButton(
                     onPressed: () => Get.back(),
-                    child: Text('Cancel'),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
                   ),
                   SizedBox(width: 12),
                   ElevatedButton(
@@ -247,7 +408,14 @@ class CustomersView extends StatelessWidget {
                       if (nameController.text.isEmpty ||
                           emailController.text.isEmpty ||
                           phoneController.text.isEmpty) {
-                        Get.snackbar('Error', 'Please fill all fields');
+                        Get.snackbar(
+                          'Error',
+                          'Please fill all fields',
+                          backgroundColor: isDark
+                              ? AppColors.darkSurface
+                              : Colors.white,
+                          colorText: AppColors.getTextPrimary(isDark),
+                        );
                         return;
                       }
 
@@ -262,7 +430,9 @@ class CustomersView extends StatelessWidget {
                       Get.back();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
                       padding: EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 12,
@@ -282,6 +452,7 @@ class CustomersView extends StatelessWidget {
   void _showEditCustomerDialog(
     CustomerController controller,
     ClientModel customer,
+    bool isDark,
   ) {
     final nameController = TextEditingController(text: customer.name);
     final emailController = TextEditingController(text: customer.email);
@@ -289,6 +460,7 @@ class CustomersView extends StatelessWidget {
 
     Get.dialog(
       Dialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
         child: Container(
           width: 500,
           padding: EdgeInsets.all(24),
@@ -298,34 +470,89 @@ class CustomersView extends StatelessWidget {
             children: [
               Text(
                 'Edit Customer',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               SizedBox(height: 24),
               TextField(
                 controller: nameController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Name',
-                  prefixIcon: Icon(Iconsax.user),
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.user,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 16),
               TextField(
                 controller: emailController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Iconsax.sms),
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.sms,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               SizedBox(height: 16),
               TextField(
                 controller: phoneController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   labelText: 'Phone Number',
-                  prefixIcon: Icon(Iconsax.call),
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  prefixIcon: Icon(
+                    Iconsax.call,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  ),
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -335,7 +562,12 @@ class CustomersView extends StatelessWidget {
                 children: [
                   TextButton(
                     onPressed: () => Get.back(),
-                    child: Text('Cancel'),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
                   ),
                   SizedBox(width: 12),
                   ElevatedButton(
@@ -351,7 +583,9 @@ class CustomersView extends StatelessWidget {
                       Get.back();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
                       padding: EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 12,
@@ -371,13 +605,27 @@ class CustomersView extends StatelessWidget {
   void _showDeleteConfirmation(
     CustomerController controller,
     ClientModel customer,
+    bool isDark,
   ) {
     Get.dialog(
       AlertDialog(
-        title: Text('Delete Customer'),
-        content: Text('Are you sure you want to delete ${customer.name}?'),
+        backgroundColor: AppColors.getSurfaceColor(isDark),
+        title: Text(
+          'Delete Customer',
+          style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+        ),
+        content: Text(
+          'Are you sure you want to delete ${customer.name}?',
+          style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+        ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+            ),
+          ),
           ElevatedButton(
             onPressed: () async {
               await controller.deleteCustomer(customer.id);

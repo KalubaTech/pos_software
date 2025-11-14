@@ -3,8 +3,9 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:ui';
 import '../../controllers/dashboard_controller.dart';
-import '../../controllers/business_settings_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 
@@ -14,85 +15,314 @@ class DashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(DashboardController());
+    final appearanceController = Get.find<AppearanceController>();
+    final ScrollController scrollController = ScrollController();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return Center(child: CircularProgressIndicator());
-        }
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
 
-        return RefreshIndicator(
-          onRefresh: controller.refresh,
-          child: SingleChildScrollView(
-            physics: AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(controller),
-                SizedBox(height: 24),
-                _buildStatsCards(controller),
-                SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 2, child: _buildSalesChart(controller)),
-                    SizedBox(width: 24),
-                    Expanded(child: _buildTopProducts(controller)),
-                  ],
-                ),
-                SizedBox(height: 24),
-                _buildRecentTransactions(controller),
-              ],
-            ),
-          ),
-        );
-      }),
-    );
-  }
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-  Widget _buildHeader(DashboardController controller) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
+        body: Stack(
           children: [
-            Text(
-              'Dashboard',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            // Background gradient
+            Container(
+              height: 280,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: AppColors.getGradientColors(isDark),
+                ),
               ),
             ),
-            SizedBox(height: 4),
-            Text(
-              DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            // Main content
+            RefreshIndicator.adaptive(
+              onRefresh: controller.refresh,
+              child: CustomScrollView(
+                controller: scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // Glassmorphic Header
+                  SliverAppBar(
+                    expandedHeight: 200,
+                    floating: false,
+                    pinned: true,
+                    elevation: 0,
+                    backgroundColor: Colors.transparent,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: _buildGlassmorphicHeader(controller, isDark),
+                    ),
+                  ),
+                  // Content
+                  SliverPadding(
+                    padding: const EdgeInsets.all(24),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildStatsCards(controller, isDark),
+                        const SizedBox(height: 32),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: _buildSalesChart(controller, isDark),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _buildTopProducts(controller, isDark),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        _buildRecentTransactions(controller, isDark),
+                        const SizedBox(height: 24),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        ElevatedButton.icon(
-          onPressed: controller.refresh,
-          icon: Icon(Iconsax.refresh),
-          label: Text('Refresh'),
-          style: ElevatedButton.styleFrom(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      );
+    });
+  }
+
+  Widget _buildGlassmorphicHeader(DashboardController controller, bool isDark) {
+    final appearanceController = Get.find<AppearanceController>();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(32, 50, 32, 20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.getGlassBackground(
+                    isDark,
+                  ).withOpacity(isDark ? 0.2 : 0.2),
+                  AppColors.getGlassBackground(
+                    isDark,
+                  ).withOpacity(isDark ? 0.1 : 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.getGlassBorder(isDark),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.chart_215,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Dashboard',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Iconsax.calendar,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat(
+                                'EEEE, MMMM d, y',
+                              ).format(DateTime.now()),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.95),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Row(
+                  children: [
+                    // Epic Theme Toggle Button
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.3),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            appearanceController.toggleTheme();
+                            Get.snackbar(
+                              isDark ? '☀️ Light Mode' : '🌙 Dark Mode',
+                              isDark
+                                  ? 'Switched to light theme'
+                                  : 'Switched to dark theme',
+                              snackPosition: SnackPosition.BOTTOM,
+                              duration: Duration(seconds: 2),
+                              backgroundColor: isDark
+                                  ? AppColors.primary
+                                  : AppColors.darkPrimary,
+                              colorText: Colors.white,
+                              margin: EdgeInsets.all(16),
+                              borderRadius: 12,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: AnimatedSwitcher(
+                              duration: Duration(milliseconds: 300),
+                              transitionBuilder: (child, animation) {
+                                return RotationTransition(
+                                  turns: animation,
+                                  child: FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Icon(
+                                isDark ? Iconsax.sun_1 : Iconsax.moon,
+                                key: ValueKey(isDark),
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Refresh Button
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.3),
+                            Colors.white.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => controller.refresh(),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Iconsax.refresh,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Refresh',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildStatsCards(DashboardController controller) {
+  Widget _buildStatsCards(DashboardController controller, bool isDark) {
     return GridView.count(
       shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 4,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
+      crossAxisSpacing: 20,
+      mainAxisSpacing: 20,
       childAspectRatio: 1.5,
       children: [
         Obx(
@@ -100,8 +330,12 @@ class DashboardView extends StatelessWidget {
             'Today\'s Sales',
             CurrencyFormatter.format(controller.todaySales.value),
             Iconsax.dollar_circle,
-            AppColors.primary,
+            isDark ? AppColors.darkPrimary : AppColors.primary,
             '${controller.todayTransactions.value} transactions',
+            isDark
+                ? AppColors.darkPrimary.withOpacity(0.2)
+                : AppColors.primary.withOpacity(0.1),
+            isDark,
           ),
         ),
         Obx(
@@ -109,23 +343,41 @@ class DashboardView extends StatelessWidget {
             'Month Sales',
             CurrencyFormatter.format(controller.monthSales.value),
             Iconsax.chart_21,
-            Colors.blue,
+            isDark ? AppColors.darkSecondary : AppColors.secondary,
             '${controller.monthTransactions.value} transactions',
+            isDark
+                ? AppColors.darkSecondary.withOpacity(0.2)
+                : AppColors.secondary.withOpacity(0.1),
+            isDark,
           ),
         ),
-        _buildStatCard(
-          'Total Customers',
-          '${controller.totalCustomers.value}',
-          Iconsax.profile_2user,
-          Colors.orange,
-          'Active customers',
+        Obx(
+          () => _buildStatCard(
+            'Total Customers',
+            '${controller.totalCustomers.value}',
+            Iconsax.profile_2user,
+            isDark ? AppColors.darkPrimaryVariant : AppColors.primaryVariant,
+            'All time',
+            isDark
+                ? AppColors.darkPrimaryVariant.withOpacity(0.2)
+                : AppColors.primaryVariant.withOpacity(0.1),
+            isDark,
+          ),
         ),
-        _buildStatCard(
-          'Products',
-          '${controller.totalProducts.value}',
-          Iconsax.box,
-          Colors.purple,
-          '${controller.lowStockItems.value} low stock',
+        Obx(
+          () => _buildStatCard(
+            'Total Products',
+            '${controller.totalProducts.value}',
+            Iconsax.box,
+            isDark
+                ? AppColors.darkSecondaryVariant
+                : AppColors.secondaryVariant,
+            '${controller.lowStockItems.value} low stock',
+            isDark
+                ? AppColors.darkSecondaryVariant.withOpacity(0.2)
+                : AppColors.secondaryVariant.withOpacity(0.1),
+            isDark,
+          ),
         ),
       ],
     );
@@ -137,117 +389,296 @@ class DashboardView extends StatelessWidget {
     IconData icon,
     Color color,
     String subtitle,
+    Color backgroundColor,
+    bool isDark,
   ) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [
+                      AppColors.darkSurface.withOpacity(0.95),
+                      AppColors.darkSurface.withOpacity(0.85),
+                    ]
+                  : [
+                      Colors.white.withOpacity(0.9),
+                      Colors.white.withOpacity(0.7),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.white.withOpacity(0.5),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.4)
+                    : color.withOpacity(0.15),
+                blurRadius: isDark ? 20 : 24,
+                offset: const Offset(0, 10),
+                spreadRadius: 0,
+              ),
+              if (!isDark)
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.6),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
                 ),
-                child: Icon(icon, color: color, size: 24),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Background decoration with glassmorphic circle
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        color.withOpacity(0.15),
+                        color.withOpacity(0.05),
+                        Colors.transparent,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.getTextSecondary(isDark),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                color.withOpacity(isDark ? 0.25 : 0.2),
+                                color.withOpacity(isDark ? 0.15 : 0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: color.withOpacity(isDark ? 0.4 : 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(icon, color: color, size: 24),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.getTextPrimary(isDark),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                color.withOpacity(0.15),
+                                color.withOpacity(0.08),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: color.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSalesChart(DashboardController controller) {
+  Widget _buildSalesChart(DashboardController controller, bool isDark) {
     return Container(
-      padding: EdgeInsets.all(24),
+      height: 420,
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.getSurfaceColor(isDark),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Sales Overview (Last 7 Days)',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sales Overview',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Last 7 Days Performance',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.getTextSecondary(isDark),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                      .withOpacity(isDark ? 0.2 : 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                        .withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Iconsax.trend_up,
+                      size: 16,
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Weekly',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 24),
-          SizedBox(
-            height: 300,
+          const SizedBox(height: 28),
+          Expanded(
             child: Obx(() {
               if (controller.salesChartData.isEmpty) {
-                return Center(child: Text('No data available'));
+                return const Center(child: Text('No data available'));
               }
 
               return LineChart(
                 LineChartData(
-                  gridData: FlGridData(show: true, drawVerticalLine: false),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 1,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: AppColors.getDivider(isDark),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 40,
+                        reservedSize: 50,
                         getTitlesWidget: (value, meta) {
-                          return Obx(
-                            () => Text(
-                              CurrencyFormatter.format(value),
+                          if (value == meta.max || value == meta.min) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Text(
+                              NumberFormat.compact().format(value),
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey[600],
+                                color: AppColors.getTextTertiary(isDark),
                               ),
+                              textAlign: TextAlign.right,
                             ),
                           );
                         },
@@ -256,6 +687,8 @@ class DashboardView extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        reservedSize: 30,
+                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           if (value.toInt() >= 0 &&
                               value.toInt() <
@@ -264,24 +697,27 @@ class DashboardView extends StatelessWidget {
                                 controller.salesChartData[value.toInt()]['date']
                                     as DateTime;
                             return Padding(
-                              padding: EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.only(top: 8),
                               child: Text(
-                                DateFormat('E').format(date),
+                                DateFormat('E')
+                                    .format(date)
+                                    .substring(0, 1), // "M" for Monday
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.getTextSecondary(isDark),
                                 ),
                               ),
                             );
                           }
-                          return Text('');
+                          return const Text('');
                         },
                       ),
                     ),
-                    topTitles: AxisTitles(
+                    topTitles: const AxisTitles(
                       sideTitles: SideTitles(showTitles: false),
                     ),
-                    rightTitles: AxisTitles(
+                    rightTitles: const AxisTitles(
                       sideTitles: SideTitles(showTitles: false),
                     ),
                   ),
@@ -296,16 +732,53 @@ class DashboardView extends StatelessWidget {
                         ),
                       ),
                       isCurved: true,
-                      color: AppColors.primary,
-                      barWidth: 3,
-                      dotData: FlDotData(show: true),
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 4,
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                            strokeWidth: 2,
+                            strokeColor: AppColors.getSurfaceColor(isDark),
+                          );
+                        },
+                      ),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: AppColors.primary.withOpacity(0.1),
+                        gradient: LinearGradient(
+                          colors: [
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withOpacity(isDark ? 0.2 : 0.3),
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withOpacity(0.0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
                       ),
                     ),
                   ],
                   minY: 0,
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          return LineTooltipItem(
+                            CurrencyFormatter.format(spot.y),
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
                 ),
               );
             }),
@@ -315,180 +788,458 @@ class DashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildTopProducts(DashboardController controller) {
+  Widget _buildTopProducts(DashboardController controller, bool isDark) {
     return Container(
-      padding: EdgeInsets.all(24),
+      height: 420,
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.getSurfaceColor(isDark),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Top Selling Products',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      (isDark ? AppColors.darkPrimary : AppColors.primary)
+                          .withOpacity(isDark ? 0.25 : 0.2),
+                      (isDark ? AppColors.darkPrimary : AppColors.primary)
+                          .withOpacity(isDark ? 0.15 : 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                        .withOpacity(0.3),
+                  ),
+                ),
+                child: Icon(
+                  Iconsax.medal_star,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Top Products',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  Text(
+                    'Best sellers',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.getTextSecondary(isDark),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          SizedBox(height: 16),
-          Obx(() {
-            if (controller.topSellingProducts.isEmpty) {
-              return Center(child: Text('No data available'));
-            }
-
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: controller.topSellingProducts.length,
-              itemBuilder: (context, index) {
-                final item = controller.topSellingProducts[index];
-                final product = item['product'];
-                final quantity = item['quantity'];
-                final revenue = item['revenue'];
-
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Row(
+          const SizedBox(height: 24),
+          Expanded(
+            child: Obx(() {
+              if (controller.topSellingProducts.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '#${index + 1}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
+                      Icon(
+                        Iconsax.box,
+                        size: 48,
+                        color: AppColors.getTextTertiary(isDark),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Obx(
-                              () => Text(
-                                '$quantity sold • ${CurrencyFormatter.format(revenue)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'No sales data yet',
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                          fontSize: 14,
                         ),
                       ),
                     ],
                   ),
                 );
-              },
-            );
-          }),
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(),
+                itemCount: controller.topSellingProducts.length > 5
+                    ? 5
+                    : controller.topSellingProducts.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 24, color: AppColors.getDivider(isDark)),
+                itemBuilder: (context, index) {
+                  final item = controller.topSellingProducts[index];
+                  final product = item['product'];
+                  final quantity = item['quantity'];
+                  final revenue = item['revenue'];
+
+                  // Color for ranking
+                  final rankColor = index == 0
+                      ? (isDark ? Color(0xFFFFD700) : Colors.amber.shade600)
+                      : index == 1
+                      ? (isDark ? Color(0xFFC0C0C0) : Colors.grey.shade400)
+                      : index == 2
+                      ? (isDark ? Color(0xFFCD7F32) : Colors.brown.shade400)
+                      : (isDark ? AppColors.darkPrimary : AppColors.primary);
+
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.08)
+                            : Colors.grey.shade100,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                rankColor.withOpacity(isDark ? 0.3 : 0.2),
+                                rankColor.withOpacity(isDark ? 0.2 : 0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: rankColor.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '#${index + 1}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: rankColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.getTextPrimary(isDark),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (isDark
+                                                  ? AppColors.darkPrimary
+                                                  : AppColors.primary)
+                                              .withOpacity(isDark ? 0.2 : 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color:
+                                            (isDark
+                                                    ? AppColors.darkPrimary
+                                                    : AppColors.primary)
+                                                .withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '$quantity sold',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    CurrencyFormatter.format(revenue),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRecentTransactions(DashboardController controller) {
+  Widget _buildRecentTransactions(DashboardController controller, bool isDark) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.getSurfaceColor(isDark),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Recent Transactions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(height: 16),
-          Obx(() {
-            if (controller.recentTransactions.isEmpty) {
-              return Center(child: Text('No transactions yet'));
-            }
-
-            return Table(
-              columnWidths: {
-                0: FlexColumnWidth(1),
-                1: FlexColumnWidth(2),
-                2: FlexColumnWidth(1.5),
-                3: FlexColumnWidth(1),
-                4: FlexColumnWidth(1),
-              },
-              children: [
-                TableRow(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey[300]!),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          (isDark ? AppColors.darkPrimary : AppColors.primary)
+                              .withOpacity(isDark ? 0.25 : 0.2),
+                          (isDark ? AppColors.darkPrimary : AppColors.primary)
+                              .withOpacity(isDark ? 0.15 : 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color:
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withOpacity(0.3),
+                      ),
+                    ),
+                    child: Icon(
+                      Iconsax.receipt_text,
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                      size: 20,
                     ),
                   ),
-                  children: [
-                    _buildTableHeader('ID'),
-                    _buildTableHeader('Date & Time'),
-                    _buildTableHeader('Customer'),
-                    _buildTableHeader('Payment'),
-                    _buildTableHeader('Total'),
-                  ],
-                ),
-                ...controller.recentTransactions.map((transaction) {
-                  return TableRow(
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTableCell(transaction.id),
-                      _buildTableCell(
-                        DateFormat(
-                          'MMM dd, HH:mm',
-                        ).format(transaction.transactionDate),
+                      Text(
+                        'Recent Transactions',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(isDark),
+                          letterSpacing: -0.3,
+                        ),
                       ),
-                      _buildTableCell(transaction.customerName ?? 'Guest'),
-                      _buildTableCell(
-                        transaction.paymentMethod.name.toUpperCase(),
-                      ),
-                      Obx(
-                        () => _buildTableCell(
-                          CurrencyFormatter.format(transaction.total),
-                          bold: true,
+                      Text(
+                        'Latest activity',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.getTextSecondary(isDark),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                  );
-                }).toList(),
-              ],
+                  ),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  // TODO: Navigate to full transactions view
+                },
+                icon: Icon(Iconsax.arrow_right_3, size: 16),
+                label: Text('View All'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Obx(() {
+            if (controller.recentTransactions.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(48.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Iconsax.receipt_disscount,
+                        size: 64,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No transactions yet',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.grey.shade100,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(1),
+                  1: FlexColumnWidth(2),
+                  2: FlexColumnWidth(1.5),
+                  3: FlexColumnWidth(1),
+                  4: FlexColumnWidth(1),
+                  5: IntrinsicColumnWidth(),
+                },
+                children: [
+                  TableRow(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.darkSurfaceVariant
+                          : Colors.grey.shade50,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                    children: [
+                      _buildTableHeader('ID', isDark),
+                      _buildTableHeader('Date & Time', isDark),
+                      _buildTableHeader('Customer', isDark),
+                      _buildTableHeader('Method', isDark),
+                      _buildTableHeader('Total', isDark),
+                      _buildTableHeader('', isDark),
+                    ],
+                  ),
+                  ...controller.recentTransactions.map((transaction) {
+                    return TableRow(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      children: [
+                        _buildTableCell(transaction.id, isDark),
+                        _buildTableCell(
+                          DateFormat(
+                            'MMM dd, hh:mm a',
+                          ).format(transaction.transactionDate),
+                          isDark,
+                        ),
+                        _buildTableCell(
+                          transaction.customerName ?? 'Guest',
+                          isDark,
+                        ),
+                        _buildTableCellWithBadge(
+                          transaction.paymentMethod.name.toUpperCase(),
+                          isDark,
+                        ),
+                        _buildTableCell(
+                          CurrencyFormatter.format(transaction.total),
+                          isDark,
+                          bold: true,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8.0,
+                            horizontal: 8.0,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Iconsax.eye,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                            onPressed: () {
+                              // TODO: Implement view transaction details action
+                            },
+                            tooltip: 'View Details',
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.primary.withOpacity(
+                                0.1,
+                              ),
+                              padding: const EdgeInsets.all(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
             );
           }),
         ],
@@ -496,29 +1247,77 @@ class DashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildTableHeader(String text) {
+  Widget _buildTableHeader(String text, bool isDark) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.all(16),
       child: Text(
         text,
         style: TextStyle(
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
           fontSize: 12,
-          color: Colors.grey[700],
+          color: AppColors.getTextSecondary(isDark),
+          letterSpacing: 0.5,
+          textBaseline: TextBaseline.alphabetic,
         ),
       ),
     );
   }
 
-  Widget _buildTableCell(String text, {bool bold = false}) {
+  Widget _buildTableCell(String text, bool isDark, {bool bold = false}) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Text(
         text,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 13,
-          fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
-          color: Colors.black87,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          color: bold
+              ? AppColors.getTextPrimary(isDark)
+              : AppColors.getTextSecondary(isDark),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCellWithBadge(String text, bool isDark) {
+    Color badgeColor;
+    switch (text.toUpperCase()) {
+      case 'CASH':
+        badgeColor = isDark ? AppColors.darkSecondary : AppColors.secondary;
+        break;
+      case 'CARD':
+        badgeColor = isDark ? AppColors.darkPrimary : AppColors.primary;
+        break;
+      case 'MOBILE':
+        badgeColor = isDark
+            ? AppColors.darkSecondaryVariant
+            : AppColors.secondaryVariant;
+        break;
+      default:
+        badgeColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: badgeColor.withOpacity(isDark ? 0.2 : 0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: badgeColor.withOpacity(isDark ? 0.4 : 0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: badgeColor,
+          ),
+          textAlign: TextAlign.center,
         ),
       ),
     );

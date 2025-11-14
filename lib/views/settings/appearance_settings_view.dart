@@ -11,43 +11,47 @@ class AppearanceSettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(AppearanceController());
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Column(
-        children: [
-          _buildHeader(controller),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildThemeSettings(controller),
-                  SizedBox(height: 24),
-                  _buildColorSettings(controller),
-                  SizedBox(height: 24),
-                  _buildFontSettings(controller),
-                  SizedBox(height: 24),
-                  _buildLayoutSettings(controller),
-                  SizedBox(height: 24),
-                  _buildPreview(controller),
-                ],
+    return Obx(() {
+      final isDark = controller.isDarkMode.value;
+
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
+        body: Column(
+          children: [
+            _buildHeader(controller, isDark),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildThemeSettings(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildColorSettings(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildFontSettings(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildLayoutSettings(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildPreview(controller, isDark),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildHeader(AppearanceController controller) {
+  Widget _buildHeader(AppearanceController controller, bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.getSurfaceColor(isDark),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -61,12 +65,19 @@ class AppearanceSettingsView extends StatelessWidget {
             children: [
               Text(
                 'Appearance Settings',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
               ),
               SizedBox(height: 4),
               Text(
                 'Customize the look and feel of your POS',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                  color: AppColors.getTextSecondary(isDark),
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -76,9 +87,18 @@ class AppearanceSettingsView extends StatelessWidget {
                 onPressed: () {
                   Get.dialog(
                     AlertDialog(
-                      title: Text('Reset to Defaults'),
+                      backgroundColor: AppColors.getSurfaceColor(isDark),
+                      title: Text(
+                        'Reset to Defaults',
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                      ),
                       content: Text(
                         'Are you sure you want to reset appearance to default?',
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
                       ),
                       actions: [
                         TextButton(
@@ -120,7 +140,9 @@ class AppearanceSettingsView extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: isDark
+                      ? AppColors.darkPrimary
+                      : AppColors.primary,
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
               ),
@@ -131,8 +153,10 @@ class AppearanceSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeSettings(AppearanceController controller) {
+  Widget _buildThemeSettings(AppearanceController controller, bool isDark) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -140,11 +164,18 @@ class AppearanceSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.moon, color: AppColors.primary),
+                Icon(
+                  Iconsax.moon,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Theme Mode',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -239,8 +270,10 @@ class AppearanceSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildColorSettings(AppearanceController controller) {
+  Widget _buildColorSettings(AppearanceController controller, bool isDark) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -248,18 +281,25 @@ class AppearanceSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.colorfilter, color: AppColors.primary),
+                Icon(
+                  Iconsax.colorfilter,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Primary Color',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
             SizedBox(height: 16),
             Text(
               'Choose your brand color',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: AppColors.getTextSecondary(isDark)),
             ),
             SizedBox(height: 24),
             Obx(() {
@@ -319,8 +359,10 @@ class AppearanceSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildFontSettings(AppearanceController controller) {
+  Widget _buildFontSettings(AppearanceController controller, bool isDark) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -328,16 +370,29 @@ class AppearanceSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.text, color: AppColors.primary),
+                Icon(
+                  Iconsax.text,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Font Settings',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
             SizedBox(height: 24),
-            Text('Font Size', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              'Font Size',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.getTextPrimary(isDark),
+              ),
+            ),
             SizedBox(height: 12),
             Obx(() {
               return Row(
@@ -428,8 +483,10 @@ class AppearanceSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildLayoutSettings(AppearanceController controller) {
+  Widget _buildLayoutSettings(AppearanceController controller, bool isDark) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -437,11 +494,18 @@ class AppearanceSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.grid_1, color: AppColors.primary),
+                Icon(
+                  Iconsax.grid_1,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Layout Preferences',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -509,8 +573,10 @@ class AppearanceSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildPreview(AppearanceController controller) {
+  Widget _buildPreview(AppearanceController controller, bool isDark) {
     return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -518,11 +584,18 @@ class AppearanceSettingsView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.eye, color: AppColors.primary),
+                Icon(
+                  Iconsax.eye,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Preview',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
