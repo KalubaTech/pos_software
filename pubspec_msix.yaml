@@ -1,0 +1,69 @@
+# MSIX Configuration for Microsoft Store Deployment
+# This file configures the Windows app package for Microsoft Store submission
+
+msix_config:
+  # Display name shown in Microsoft Store and Start Menu
+  display_name: Dynamos POS
+  
+  # Publisher display name (must match your Microsoft Partner Center account)
+  # You'll need to replace this with your actual publisher name from Partner Center
+  publisher_display_name: Kaluba Technologies
+  
+  # Identity name - unique identifier for your app (reverse domain notation)
+  # Format: CompanyName.AppName
+  identity_name: com.kalootech.dynamospos
+  
+  # MSIX version format: Major.Minor.Build.Revision
+  # Must be greater than previous version for updates
+  msix_version: 1.0.0.0
+  
+  # Publisher identity - will be auto-generated when you sign with your certificate
+  # Get this from your Microsoft Partner Center account
+  # Format: CN=YourPublisherName, O=YourOrganization, L=City, S=State, C=Country
+  publisher: CN=KalubaTechnologies
+  
+  # Logo/Icon path - must be a .png file (NOT .ico)
+  # Required sizes: 44x44, 50x50, 150x150, 310x150
+  logo_path: windows\runner\resources\app_icon.png
+  
+  # App description for the Store listing
+  description: |
+    Dynamos POS - A powerful, cross-platform Point of Sale software designed for modern businesses.
+    
+    Features:
+    • Inventory Management
+    • Sales Tracking & Reporting
+    • Customer Management
+    • Receipt Printing (Bluetooth & Network)
+    • Price Tag Designer & Printing
+    • Dark Mode Support
+    • Multi-business Support
+    • Subscription Management
+    • Offline Capabilities
+    • Beautiful, Professional UI
+    
+    Perfect for retail stores, restaurants, cafes, and small businesses.
+  
+  # Capabilities - Windows permissions your app needs
+  capabilities: 'internetClient,removableStorage,enterpriseAuthentication'
+  
+  # File extensions your app can open (optional)
+  # file_extension: '.csv,.json'
+  
+  # Protocol activation (optional) - for deep linking
+  # protocol_activation: 'dynamospos'
+  
+  # Languages supported
+  languages: en-us
+  
+  # Certificate information (for signing)
+  # You'll get this from Microsoft Partner Center
+  # certificate_path: C:\certificates\your_certificate.pfx
+  # certificate_password: your_password
+  
+  # Architecture support
+  architecture: x64
+  
+  # Store association (filled in after creating app in Partner Center)
+  # store_package_name: YourPackageName
+  # store_publisher_id: Your Publisher ID

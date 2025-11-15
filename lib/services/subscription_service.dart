@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:http/http.dart' as http;
 import '../models/subscription_model.dart';
+import '../models/unresolved_transaction_model.dart';
 import '../services/database_service.dart';
 
 class SubscriptionService extends GetxService {
@@ -16,14 +17,21 @@ class SubscriptionService extends GetxService {
   );
   final RxBool isLoading = false.obs;
 
+  // Unresolved transactions
+  final RxList<UnresolvedTransactionModel> unresolvedTransactions =
+      <UnresolvedTransactionModel>[].obs;
+
   static const String _storageKey = 'current_subscription';
   static const String _tableName = 'subscriptions';
+  static const String _unresolvedTableName = 'unresolved_transactions';
 
   @override
   Future<void> onInit() async {
     super.onInit();
     await _initializeTable();
+    await _initializeUnresolvedTransactionsTable();
     await _loadSubscription();
+    await _loadUnresolvedTransactions();
     _startExpiryCheck();
   }
 
@@ -56,6 +64,100 @@ class SubscriptionService extends GetxService {
       CREATE INDEX IF NOT EXISTS idx_subscription_status 
       ON $_tableName(status)
     ''');
+  }
+
+  Future<void> _initializeUnresolvedTransactionsTable() async {
+    try {
+      print('🔷 [Service] Initializing unresolved transactions table...');
+      final db = await _db.database;
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $_unresolvedTableName (
+          id TEXT PRIMARY KEY,
+          businessId TEXT NOT NULL,
+          plan TEXT NOT NULL,
+          transactionId TEXT NOT NULL,
+          lencoReference TEXT,
+          phone TEXT NOT NULL,
+          operator TEXT NOT NULL,
+          amount REAL NOT NULL,
+          status TEXT NOT NULL,
+          createdAt TEXT NOT NULL,
+          lastCheckedAt TEXT,
+          checkAttempts INTEGER DEFAULT 0,
+          lastError TEXT
+        )
+      ''');
+      print('✅ [Service] Table created/verified');
+
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_unresolved_business 
+        ON $_unresolvedTableName(businessId)
+      ''');
+
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_unresolved_status 
+        ON $_unresolvedTableName(status)
+      ''');
+      print('✅ [Service] Indexes created/verified');
+
+      // Verify table exists and check record count
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_unresolvedTableName',
+      );
+      final count = Sqflite.firstIntValue(result) ?? 0;
+      print('📊 [Service] Table verified: $count records exist');
+    } catch (e) {
+      print('❌ [Service] Error initializing unresolved transactions table: $e');
+      print('🔍 [Service] Stack trace: ${StackTrace.current}');
+    }
+  }
+
+  Future<void> _loadUnresolvedTransactions() async {
+    try {
+      print('🔄 [Service] _loadUnresolvedTransactions called');
+      final db = await _db.database;
+      print('💾 [Service] Querying database...');
+
+      final results = await db.query(
+        _unresolvedTableName,
+        where: 'status != ?',
+        whereArgs: ['resolved'],
+        orderBy: 'createdAt DESC',
+      );
+
+      print('📊 [Service] Query returned ${results.length} records');
+
+      final transactions = results
+          .map((json) => UnresolvedTransactionModel.fromJson(json))
+          .toList();
+
+      print('📋 [Service] Parsed ${transactions.length} transactions');
+      print(
+        '📝 [Service] Transaction IDs: ${transactions.map((t) => t.transactionId).toList()}',
+      );
+
+      print('🔧 [Service] Setting observable value...');
+      print(
+        '🔧 [Service] Before: unresolvedTransactions.length = ${unresolvedTransactions.length}',
+      );
+
+      unresolvedTransactions.value = transactions;
+
+      print(
+        '🔧 [Service] After: unresolvedTransactions.length = ${unresolvedTransactions.length}',
+      );
+      print(
+        '✅ [Service] Loaded ${unresolvedTransactions.length} unresolved transactions',
+      );
+
+      // Force a manual update to ensure observers are notified
+      unresolvedTransactions.refresh();
+      print('🔔 [Service] Called refresh() on observable');
+    } catch (e) {
+      print('❌ [Service] Error loading unresolved transactions: $e');
+      print('🔍 [Service] Stack trace: ${StackTrace.current}');
+    }
   }
 
   Future<void> _loadSubscription() async {
@@ -619,5 +721,258 @@ class SubscriptionService extends GetxService {
     final status = paymentResult['status'];
 
     return success && (status == 'completed' || status == 'pay-offline');
+  }
+
+  // ========== Unresolved Transactions Management ==========
+
+  /// Add a transaction to unresolved list
+  Future<void> addUnresolvedTransaction({
+    required String businessId,
+    required SubscriptionPlan plan,
+    required String transactionId,
+    String? lencoReference,
+    required String phone,
+    required String operator,
+    required double amount,
+  }) async {
+    try {
+      print('🔷 [Service] Adding unresolved transaction...');
+      print('📝 [Service] Transaction ID: $transactionId');
+      print('📝 [Service] Phone: $phone');
+      print('📝 [Service] Operator: $operator');
+      print('📝 [Service] Amount: $amount');
+
+      final transaction = UnresolvedTransactionModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        businessId: businessId,
+        plan: plan,
+        transactionId: transactionId,
+        lencoReference: lencoReference,
+        phone: phone,
+        operator: operator,
+        amount: amount,
+        status: TransactionStatus.pending,
+        createdAt: DateTime.now(),
+        checkAttempts: 0,
+      );
+
+      print('💾 [Service] Inserting into database...');
+      final db = await _db.database;
+      await db.insert(
+        _unresolvedTableName,
+        transaction.toJson(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      print('✅ [Service] Database insert successful');
+
+      print('🔄 [Service] Reloading unresolved transactions...');
+      await _loadUnresolvedTransactions();
+      print(
+        '✅ [Service] Added unresolved transaction: ${transaction.transactionId}',
+      );
+      print('📊 [Service] Current count: ${unresolvedTransactions.length}');
+      print(
+        '📋 [Service] List contents: ${unresolvedTransactions.map((t) => t.transactionId).toList()}',
+      );
+    } catch (e) {
+      print('❌ [Service] Error adding unresolved transaction: $e');
+      print('🔍 [Service] Stack trace: ${StackTrace.current}');
+    }
+  }
+
+  /// Update an unresolved transaction
+  Future<void> updateUnresolvedTransaction(
+    String id, {
+    TransactionStatus? status,
+    DateTime? lastCheckedAt,
+    int? checkAttempts,
+    String? lastError,
+  }) async {
+    try {
+      final db = await _db.database;
+
+      final current = unresolvedTransactions.firstWhere(
+        (t) => t.id == id,
+        orElse: () => throw Exception('Transaction not found'),
+      );
+
+      final updated = current.copyWith(
+        status: status,
+        lastCheckedAt: lastCheckedAt,
+        checkAttempts: checkAttempts,
+        lastError: lastError,
+      );
+
+      await db.update(
+        _unresolvedTableName,
+        updated.toJson(),
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      await _loadUnresolvedTransactions();
+      print('Updated unresolved transaction: $id');
+    } catch (e) {
+      print('Error updating unresolved transaction: $e');
+    }
+  }
+
+  /// Remove a resolved transaction
+  Future<void> removeUnresolvedTransaction(String id) async {
+    try {
+      final db = await _db.database;
+
+      // Mark as resolved instead of deleting (for history)
+      await db.update(
+        _unresolvedTableName,
+        {'status': TransactionStatus.resolved.name},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      await _loadUnresolvedTransactions();
+      print('Marked transaction as resolved: $id');
+    } catch (e) {
+      print('Error removing unresolved transaction: $e');
+    }
+  }
+
+  /// Retry checking status for an unresolved transaction
+  Future<Map<String, dynamic>?> retryUnresolvedTransaction(
+    UnresolvedTransactionModel transaction,
+  ) async {
+    try {
+      print('=== RETRYING TRANSACTION CHECK ===');
+      print('Transaction ID: ${transaction.transactionId}');
+      print('Lenco Reference: ${transaction.lencoReference}');
+      print('Attempt: ${transaction.checkAttempts + 1}');
+
+      // Update status to checking
+      await updateUnresolvedTransaction(
+        transaction.id,
+        status: TransactionStatus.checking,
+        lastCheckedAt: DateTime.now(),
+        checkAttempts: transaction.checkAttempts + 1,
+      );
+
+      // Check transaction status
+      final statusCheck = await checkTransactionStatus(
+        transaction.transactionId,
+        lencoReference: transaction.lencoReference,
+      );
+
+      if (statusCheck != null && statusCheck['success'] == true) {
+        if (statusCheck['found'] == true) {
+          final status = statusCheck['status'];
+          print('Transaction status: $status');
+
+          if (status == 'completed') {
+            // Payment successful - activate subscription
+            final success = await activateSubscription(
+              businessId: transaction.businessId,
+              plan: transaction.plan,
+              transactionId: transaction.transactionId,
+              paymentMethod:
+                  '${transaction.operatorName} (${transaction.phone})',
+            );
+
+            if (success) {
+              // Remove from unresolved
+              await removeUnresolvedTransaction(transaction.id);
+
+              return {
+                'success': true,
+                'status': 'completed',
+                'message': 'Payment completed! Subscription activated.',
+                'mmAccountName': statusCheck['mmAccountName'],
+                'mmOperatorTxnId': statusCheck['mmOperatorTxnId'],
+              };
+            }
+          } else if (status == 'failed') {
+            // Payment failed - remove from unresolved
+            await removeUnresolvedTransaction(transaction.id);
+
+            return {
+              'success': false,
+              'status': 'failed',
+              'message': statusCheck['reasonForFailure'] ?? 'Payment failed',
+              'mmAccountName': statusCheck['mmAccountName'],
+            };
+          } else {
+            // Still pending
+            await updateUnresolvedTransaction(
+              transaction.id,
+              status: TransactionStatus.pending,
+              lastError: 'Payment still pending',
+            );
+
+            return {
+              'success': false,
+              'status': 'pending',
+              'message': 'Payment is still being processed',
+            };
+          }
+        } else {
+          // Transaction not found
+          await updateUnresolvedTransaction(
+            transaction.id,
+            status: TransactionStatus.notFound,
+            lastError: 'Transaction not found',
+          );
+
+          return {
+            'success': false,
+            'status': 'not-found',
+            'message': 'Transaction not found yet. Please try again later.',
+          };
+        }
+      } else {
+        // API error
+        await updateUnresolvedTransaction(
+          transaction.id,
+          status: TransactionStatus.timeout,
+          lastError: statusCheck?['error'] ?? 'API error',
+        );
+
+        return {
+          'success': false,
+          'status': 'error',
+          'message': statusCheck?['error'] ?? 'Failed to check status',
+        };
+      }
+    } catch (e) {
+      print('Error retrying transaction: $e');
+
+      await updateUnresolvedTransaction(
+        transaction.id,
+        status: TransactionStatus.timeout,
+        lastError: e.toString(),
+      );
+
+      return {'success': false, 'status': 'error', 'message': 'Error: $e'};
+    }
+
+    return null; // Fallback return
+  }
+
+  /// Clean up old resolved transactions (older than 30 days)
+  Future<void> cleanupOldTransactions() async {
+    try {
+      final db = await _db.database;
+      final thirtyDaysAgo = DateTime.now().subtract(Duration(days: 30));
+
+      await db.delete(
+        _unresolvedTableName,
+        where: 'status = ? AND createdAt < ?',
+        whereArgs: [
+          TransactionStatus.resolved.name,
+          thirtyDaysAgo.toIso8601String(),
+        ],
+      );
+
+      print('Cleaned up old resolved transactions');
+    } catch (e) {
+      print('Error cleaning up old transactions: $e');
+    }
   }
 }

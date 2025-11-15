@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../models/subscription_model.dart';
+import '../../models/unresolved_transaction_model.dart';
 import '../../services/subscription_service.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../controllers/business_settings_controller.dart';
 import '../../utils/colors.dart';
 import 'package:intl/intl.dart';
+// import '../../debug_unresolved_test.dart'; // Commented out for production build
 
 class SubscriptionView extends StatefulWidget {
   const SubscriptionView({super.key});
@@ -85,6 +88,90 @@ class _SubscriptionViewState extends State<SubscriptionView> {
             children: [
               _buildHeader(isDark),
               SizedBox(height: 24),
+              // DEBUG PANEL - Commented out for production build
+              /* if (kDebugMode)
+                Card(
+                  color: Colors.red.shade50,
+                  margin: EdgeInsets.only(bottom: 24),
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.bug_report, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text(
+                              '🐛 DEBUG TOOLS',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed:
+                                  UnresolvedTransactionsDebugger.checkStatus,
+                              icon: Icon(Icons.info_outline, size: 16),
+                              label: Text('Check Status'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: UnresolvedTransactionsDebugger
+                                  .addTestTransaction,
+                              icon: Icon(Icons.add_circle_outline, size: 16),
+                              label: Text('Add Test'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: UnresolvedTransactionsDebugger
+                                  .reloadFromDatabase,
+                              icon: Icon(Icons.refresh, size: 16),
+                              label: Text('Reload'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: UnresolvedTransactionsDebugger
+                                  .clearAllTransactions,
+                              icon: Icon(Icons.delete_outline, size: 16),
+                              label: Text('Clear All'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade700,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: UnresolvedTransactionsDebugger
+                                  .runFullDiagnostics,
+                              icon: Icon(Icons.science_outlined, size: 16),
+                              label: Text('Full Diagnostics'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ), */
               // Result notification card
               Obx(() {
                 if (showResultNotification.value) {
@@ -107,6 +194,44 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 return SizedBox.shrink();
               }),
               if (isCheckingPayment.value) SizedBox(height: 24),
+              // Unresolved transactions section
+              Obx(() {
+                // Debug logging to track observable updates
+                print('🔍 [Obx] Unresolved transactions rebuild triggered');
+                print(
+                  '📊 [Obx] Count: ${subscriptionService.unresolvedTransactions.length}',
+                );
+                print(
+                  '📋 [Obx] isEmpty: ${subscriptionService.unresolvedTransactions.isEmpty}',
+                );
+                print(
+                  '📋 [Obx] isNotEmpty: ${subscriptionService.unresolvedTransactions.isNotEmpty}',
+                );
+
+                if (subscriptionService.unresolvedTransactions.isNotEmpty) {
+                  print('✅ [Obx] Showing unresolved section');
+                  print(
+                    '📝 [Obx] Transactions: ${subscriptionService.unresolvedTransactions.map((t) => t.transactionId).toList()}',
+                  );
+
+                  return FadeInUp(
+                    duration: Duration(milliseconds: 300),
+                    child: Column(
+                      children: [
+                        _buildUnresolvedTransactionsSection(
+                          subscriptionService,
+                          businessController,
+                          isDark,
+                        ),
+                        SizedBox(height: 24),
+                      ],
+                    ),
+                  );
+                } else {
+                  print('❌ [Obx] Hiding unresolved section (list is empty)');
+                }
+                return SizedBox.shrink();
+              }),
               if (currentSubscription != null)
                 FadeInUp(
                   duration: Duration(milliseconds: 300),
@@ -178,6 +303,310 @@ class _SubscriptionViewState extends State<SubscriptionView> {
         ),
       ],
     );
+  }
+
+  Widget _buildUnresolvedTransactionsSection(
+    SubscriptionService subscriptionService,
+    BusinessSettingsController businessController,
+    bool isDark,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Iconsax.clock, color: Colors.orange, size: 24),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Unresolved Transactions',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Text(
+                '${subscriptionService.unresolvedTransactions.length}',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Text(
+          'These transactions could not be verified. You can retry checking their status.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.getTextSecondary(isDark),
+          ),
+        ),
+        SizedBox(height: 16),
+        ...subscriptionService.unresolvedTransactions.map((transaction) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: _buildUnresolvedTransactionCard(
+              transaction,
+              subscriptionService,
+              businessController,
+              isDark,
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildUnresolvedTransactionCard(
+    UnresolvedTransactionModel transaction,
+    SubscriptionService subscriptionService,
+    BusinessSettingsController businessController,
+    bool isDark,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Iconsax.wallet, color: Colors.orange, size: 20),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      transaction.planName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'K${transaction.amount.toStringAsFixed(2)} • ${transaction.operatorName}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(
+                    transaction.status,
+                  ).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getStatusColor(transaction.status),
+                  ),
+                ),
+                child: Text(
+                  transaction.statusText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _getStatusColor(transaction.status),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Divider(color: AppColors.getDivider(isDark)),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Transaction Reference',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      transaction.lencoReference ?? transaction.transactionId,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Phone Number',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      transaction.phone,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Iconsax.clock,
+                size: 14,
+                color: AppColors.getTextSecondary(isDark),
+              ),
+              SizedBox(width: 6),
+              Text(
+                '${transaction.hoursSinceCreated}h ago • ${transaction.checkAttempts} attempts',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.getTextSecondary(isDark),
+                ),
+              ),
+            ],
+          ),
+          if (transaction.canRetry) ...[
+            SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _retryUnresolvedTransaction(
+                  transaction,
+                  subscriptionService,
+                  businessController,
+                ),
+                icon: Icon(Iconsax.refresh, size: 18),
+                label: Text('Retry Status Check'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(TransactionStatus status) {
+    switch (status) {
+      case TransactionStatus.pending:
+        return Colors.orange;
+      case TransactionStatus.checking:
+        return Colors.blue;
+      case TransactionStatus.timeout:
+        return Colors.red;
+      case TransactionStatus.notFound:
+        return Colors.orange;
+      case TransactionStatus.resolved:
+        return Colors.green;
+    }
+  }
+
+  Future<void> _retryUnresolvedTransaction(
+    UnresolvedTransactionModel transaction,
+    SubscriptionService subscriptionService,
+    BusinessSettingsController businessController,
+  ) async {
+    _showResultNotification(
+      title: 'Checking Status...',
+      message: 'Retrying transaction status check...',
+      type: 'info',
+    );
+
+    final result = await subscriptionService.retryUnresolvedTransaction(
+      transaction,
+    );
+
+    if (result != null) {
+      if (result['success'] == true && result['status'] == 'completed') {
+        _showResultNotification(
+          title: 'Payment Successful! 🎉',
+          message: result['message'] ?? 'Subscription activated!',
+          type: 'success',
+        );
+      } else if (result['status'] == 'failed') {
+        _showResultNotification(
+          title: 'Payment Failed',
+          message: result['message'] ?? 'Payment was declined',
+          type: 'error',
+        );
+      } else if (result['status'] == 'pending') {
+        _showResultNotification(
+          title: 'Still Pending',
+          message: result['message'] ?? 'Payment is still being processed',
+          type: 'warning',
+        );
+      } else {
+        _showResultNotification(
+          title: 'Not Found',
+          message: result['message'] ?? 'Transaction not found yet',
+          type: 'warning',
+        );
+      }
+    }
   }
 
   Widget _buildCurrentSubscriptionCard(
@@ -1087,10 +1516,30 @@ class _SubscriptionViewState extends State<SubscriptionView> {
           type: 'error',
         );
       } else if (confirmed['status'] == 'not-found') {
-        print('⚠️ Transaction NOT FOUND - Showing manual check button');
-        // Transaction not found after 5 attempts - show manual check button
+        print('⚠️ Transaction NOT FOUND - Adding to unresolved');
+        // Transaction not found after 5 attempts - add to unresolved
+        await subscriptionService.addUnresolvedTransaction(
+          businessId: businessController.storeName.value.isNotEmpty
+              ? businessController.storeName.value
+              : 'default',
+          plan: plan.plan,
+          transactionId: reference,
+          lencoReference: lencoReference,
+          phone: paymentResult['phone'] ?? '',
+          operator: operator,
+          amount: plan.price,
+        );
+
         checkingStatus.value = false;
         showManualCheck.value = true;
+
+        // Show information about unresolved transaction
+        _showResultNotification(
+          title: 'Transaction Saved',
+          message:
+              'Payment status could not be confirmed yet. The transaction has been saved to "Unresolved Transactions" where you can check it later.',
+          type: 'warning',
+        );
 
         // Show dialog instead of snackbar for better visibility
         Get.dialog(

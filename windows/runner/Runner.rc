@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.kalootech" "\0"
-            VALUE "FileDescription", "pos_software" "\0"
+            VALUE "CompanyName", "Kaluba Technologies" "\0"
+            VALUE "FileDescription", "Dynamos POS - Point of Sale System" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "pos_software" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.kalootech. All rights reserved." "\0"
-            VALUE "OriginalFilename", "pos_software.exe" "\0"
-            VALUE "ProductName", "pos_software" "\0"
+            VALUE "InternalName", "DynamosPOS" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Kaluba Technologies. All rights reserved." "\0"
+            VALUE "OriginalFilename", "DynamosPOS.exe" "\0"
+            VALUE "ProductName", "Dynamos POS" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

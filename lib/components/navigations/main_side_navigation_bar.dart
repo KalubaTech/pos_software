@@ -16,11 +16,11 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
   // Controls the sidebar width (expanded or collapsed)
   bool _isWidthExpanded = true;
   // Controls whether titles are shown. When false only icons are visible.
-  bool _showTitles = true;
+  bool _showTitles = false;
   int _selectedIndex = 0;
 
   final double expandedWidth = 230.0;
-  final double collapsedWidth = 60.0;
+  final double collapsedWidth = 60.0; 
 
   final List<String> menuItems = [
     'Dashboard',

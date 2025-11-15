@@ -105,6 +105,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  msix: ^3.16.12
 
 dev_dependencies:
   flutter_test:
@@ -116,6 +117,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  
+  # MSIX package for Microsoft Store deployment
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -158,3 +161,105 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# ============================================
+# Microsoft Store (MSIX) Configuration
+# ============================================
+# Configuration for building MSIX package for Microsoft Store deployment
+# Update these values with your actual Microsoft Partner Center information
+
+msix_config:
+  # Display name shown in Microsoft Store and Windows Start Menu
+  display_name: Dynamos POS
+  
+  # Publisher display name - Must match your Microsoft Partner Center account
+  # Get this from Partner Center after registration
+  publisher_display_name: Kaloo Technologies
+  
+  # Identity name - Unique identifier for your app
+  # Format: PublisherPrefix.AppName
+  # Get this from Partner Center after reserving app name
+  identity_name: KalooTechnologies.DynamosPOS
+  
+  # MSIX version - Must be incremented for each update
+  # Format: Major.Minor.Build.Revision
+  msix_version: 1.0.0.0
+  
+  # Publisher identity - Get this from Microsoft Partner Center
+  # After creating your app, go to Product Identity page
+  # Format: CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+  # IMPORTANT: Replace this with your actual publisher ID from Partner Center
+  publisher: CN=6C8EDE9F-2E47-49E3-B93C-97CDD74A456A
+  
+  # Logo/Icon path - PNG format required (not .ico)
+  # Create multiple sizes: 44x44, 50x50, 150x150, 310x150
+  logo_path: windows/runner/resources/app_icon.png
+  
+  # App capabilities - Windows permissions your app requires
+  # Common capabilities:
+  # - internetClient: Internet access
+  # - internetClientServer: Internet and local network
+  # - privateNetworkClientServer: Local network access
+  # - documentsLibrary: Access to documents
+  # - picturesLibrary: Access to pictures
+  # - videosLibrary: Access to videos
+  # - musicLibrary: Access to music
+  # - removableStorage: Access to removable storage
+  # - location: GPS location
+  # - microphone: Microphone access
+  # - webcam: Camera access
+  # - bluetooth: Bluetooth connectivity
+  capabilities: internetClient,internetClientServer,privateNetworkClientServer,documentsLibrary,removableStorage,bluetooth
+  
+  # Languages supported by your app
+  languages: en-us
+  
+  # Target architecture - x64 for most Windows PCs
+  architecture: x64
+  
+  # App description for Store listing
+  description: |
+    Dynamos POS - A comprehensive Point of Sale system for modern businesses.
+    
+    KEY FEATURES:
+    • Complete inventory management with stock tracking
+    • Real-time sales reports and analytics
+    • Customer relationship management
+    • Professional receipt printing (Thermal, Bluetooth, Network printers)
+    • Custom price tag designer with bulk printing
+    • Beautiful dark mode for comfortable use
+    • Multi-business support - manage multiple locations
+    • Offline-first design - works without internet
+    • Secure subscription management
+    • Professional and intuitive user interface
+    
+    Perfect for retail stores, restaurants, cafes, and service businesses.
+  
+  # Store category (uncomment and set after Partner Center setup)
+  # store_category: Business
+  
+  # File extensions your app can open (optional)
+  # file_extension: .csv,.json,.pdf
+  
+  # Protocol activation for deep linking (optional)
+  # protocol_activation: dynamospos
+  
+  # Certificate for signing (only needed for local testing with self-signed cert)
+  # For Store submission, leave these commented - Microsoft will sign your app
+  # certificate_path: C:\path\to\certificate.pfx
+  # certificate_password: your_password
+  
+  # Installer options
+  install_certificate: false  # Set to true only for local testing
+  
+  # Execution alias - allows running app from command line (optional)
+  # execution_alias: dynamospos
+  
+  # Visual elements background color (hex color for tile background)
+  # background_color: '#2196F3'
+  
+  # Toast capable - enable notifications
+  toast_capable: true
+  
+  # Automatic updates from Store
+  auto_update: true

@@ -1,0 +1,262 @@
+/// DEBUG TOOL: Test Unresolved Transactions
+///
+/// This file helps debug why unresolved transactions aren't showing in the UI.
+/// Add a button in your subscription_view.dart to call these test functions.
+
+import 'package:get/get.dart';
+import 'services/subscription_service.dart';
+import 'models/subscription_model.dart';
+import 'controllers/business_settings_controller.dart';
+
+class UnresolvedTransactionsDebugger {
+  static final subscriptionService = Get.find<SubscriptionService>();
+  static final businessController = Get.find<BusinessSettingsController>();
+
+  /// Check current state of unresolved transactions
+  static void checkStatus() {
+    print('\n========================================');
+    print('🔍 UNRESOLVED TRANSACTIONS DEBUG CHECK');
+    print('========================================');
+
+    print('\n📊 Observable Status:');
+    print(
+      '  - Type: ${subscriptionService.unresolvedTransactions.runtimeType}',
+    );
+    print('  - Length: ${subscriptionService.unresolvedTransactions.length}');
+    print('  - isEmpty: ${subscriptionService.unresolvedTransactions.isEmpty}');
+    print(
+      '  - isNotEmpty: ${subscriptionService.unresolvedTransactions.isNotEmpty}',
+    );
+
+    if (subscriptionService.unresolvedTransactions.isNotEmpty) {
+      print('\n📋 Transactions List:');
+      for (
+        var i = 0;
+        i < subscriptionService.unresolvedTransactions.length;
+        i++
+      ) {
+        final tx = subscriptionService.unresolvedTransactions[i];
+        print('  ${i + 1}. ${tx.transactionId}');
+        print('     Status: ${tx.status.name}');
+        print('     Phone: ${tx.phone}');
+        print('     Amount: K${tx.amount}');
+        print('     Created: ${tx.createdAt}');
+        print('     Attempts: ${tx.checkAttempts}');
+      }
+    } else {
+      print('\n❌ No unresolved transactions found');
+    }
+
+    print('\n========================================\n');
+  }
+
+  /// Add a test unresolved transaction
+  static Future<void> addTestTransaction() async {
+    print('\n========================================');
+    print('➕ ADDING TEST UNRESOLVED TRANSACTION');
+    print('========================================\n');
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final testPhone =
+        '0977${timestamp.toString().substring(timestamp.toString().length - 6)}';
+
+    print('📝 Test Transaction Details:');
+    print('  - Transaction ID: TEST-$timestamp');
+    print('  - Phone: $testPhone');
+    print('  - Operator: MTN');
+    print('  - Amount: K500.00');
+    print('  - Plan: BASIC');
+
+    try {
+      await subscriptionService.addUnresolvedTransaction(
+        businessId: businessController.storeName.value.isNotEmpty
+            ? businessController.storeName.value
+            : 'default',
+        plan: SubscriptionPlan.basic,
+        transactionId: 'TEST-$timestamp',
+        lencoReference: 'LENCO-TEST-$timestamp',
+        phone: testPhone,
+        operator: 'MTN',
+        amount: 500.0,
+      );
+
+      print('\n✅ Test transaction added successfully!');
+      print('🔍 Checking status after add...\n');
+
+      // Wait a moment for observable to update
+      await Future.delayed(Duration(milliseconds: 500));
+
+      checkStatus();
+    } catch (e) {
+      print('\n❌ Error adding test transaction: $e');
+      print('🔍 Stack trace: ${StackTrace.current}\n');
+    }
+
+    print('========================================\n');
+  }
+
+  /// Reload unresolved transactions from database
+  static Future<void> reloadFromDatabase() async {
+    print('\n========================================');
+    print('🔄 RELOADING FROM DATABASE');
+    print('========================================\n');
+
+    try {
+      // Access the private method through reflection or add a public method
+      print(
+        '⚠️ Note: This calls the internal _loadUnresolvedTransactions method',
+      );
+      print(
+        '   The service should automatically reload after add/update operations\n',
+      );
+
+      // Force a refresh
+      subscriptionService.unresolvedTransactions.refresh();
+
+      print('✅ Refresh called on observable');
+      print('🔍 Checking status after refresh...\n');
+
+      await Future.delayed(Duration(milliseconds: 200));
+      checkStatus();
+    } catch (e) {
+      print('❌ Error reloading: $e\n');
+    }
+
+    print('========================================\n');
+  }
+
+  /// Clear all unresolved transactions (for testing)
+  static Future<void> clearAllTransactions() async {
+    print('\n========================================');
+    print('🗑️ CLEARING ALL UNRESOLVED TRANSACTIONS');
+    print('========================================\n');
+
+    try {
+      print('⚠️ Warning: This will remove all unresolved transactions!\n');
+
+      for (var tx in subscriptionService.unresolvedTransactions.toList()) {
+        await subscriptionService.removeUnresolvedTransaction(tx.id);
+        print('✅ Removed: ${tx.transactionId}');
+      }
+
+      print('\n✅ All transactions cleared');
+      print('🔍 Checking status...\n');
+
+      await Future.delayed(Duration(milliseconds: 500));
+      checkStatus();
+    } catch (e) {
+      print('❌ Error clearing transactions: $e\n');
+    }
+
+    print('========================================\n');
+  }
+
+  /// Test the Obx reactive system
+  static void testObxReactivity() {
+    print('\n========================================');
+    print('🧪 TESTING OBX REACTIVITY');
+    print('========================================\n');
+
+    print('📊 Current observable state:');
+    print(
+      '  - Type: ${subscriptionService.unresolvedTransactions.runtimeType}',
+    );
+    print('  - Is Rx: ${subscriptionService.unresolvedTransactions is RxList}');
+    print('  - Length: ${subscriptionService.unresolvedTransactions.length}');
+
+    print('\n🔧 Testing manual updates...');
+
+    // Test 1: Direct assignment
+    print('\n  Test 1: Direct assignment (.value = ...)');
+    final currentList = subscriptionService.unresolvedTransactions.toList();
+    subscriptionService.unresolvedTransactions.value = currentList;
+    print('  ✅ Direct assignment completed');
+
+    // Test 2: Refresh
+    print('\n  Test 2: Calling .refresh()');
+    subscriptionService.unresolvedTransactions.refresh();
+    print('  ✅ Refresh called');
+
+    // Test 3: Update
+    print('\n  Test 3: Calling .update((val) {})');
+    subscriptionService.unresolvedTransactions.update((val) {});
+    print('  ✅ Update called');
+
+    print('\n========================================\n');
+  }
+
+  /// Run all diagnostic tests
+  static Future<void> runFullDiagnostics() async {
+    print('\n\n');
+    print('╔════════════════════════════════════════════════════════╗');
+    print('║   UNRESOLVED TRANSACTIONS - FULL DIAGNOSTICS          ║');
+    print('╚════════════════════════════════════════════════════════╝');
+
+    // Test 1: Check current status
+    checkStatus();
+    await Future.delayed(Duration(milliseconds: 500));
+
+    // Test 2: Test reactivity
+    testObxReactivity();
+    await Future.delayed(Duration(milliseconds: 500));
+
+    // Test 3: Add test transaction
+    await addTestTransaction();
+    await Future.delayed(Duration(milliseconds: 1000));
+
+    // Test 4: Check status again
+    print('\n📊 FINAL STATUS CHECK:');
+    checkStatus();
+
+    print('╔════════════════════════════════════════════════════════╗');
+    print('║   DIAGNOSTICS COMPLETE                                 ║');
+    print('╚════════════════════════════════════════════════════════╝\n\n');
+  }
+}
+
+/// Add this widget to your subscription_view.dart for easy testing:
+/*
+
+// Add at the top of your build method, inside Column:
+if (kDebugMode) 
+  Card(
+    color: Colors.red.shade50,
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Text('🐛 DEBUG TOOLS', 
+            style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton(
+                onPressed: UnresolvedTransactionsDebugger.checkStatus,
+                child: Text('Check Status'),
+              ),
+              ElevatedButton(
+                onPressed: UnresolvedTransactionsDebugger.addTestTransaction,
+                child: Text('Add Test Transaction'),
+              ),
+              ElevatedButton(
+                onPressed: UnresolvedTransactionsDebugger.reloadFromDatabase,
+                child: Text('Reload from DB'),
+              ),
+              ElevatedButton(
+                onPressed: UnresolvedTransactionsDebugger.clearAllTransactions,
+                child: Text('Clear All'),
+              ),
+              ElevatedButton(
+                onPressed: UnresolvedTransactionsDebugger.runFullDiagnostics,
+                child: Text('Run Full Diagnostics'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+
+*/

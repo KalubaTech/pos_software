@@ -20,14 +20,16 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.kalootech.pos_software"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        // Dynamos POS Application ID
+        applicationId = "com.kalootech.dynamospos"
+        // Minimum SDK for modern features and compatibility
+        minSdk = 24  // Android 7.0 and above
+        targetSdk = 34  // Latest Android version
+        versionCode = 1
+        versionName = "1.0.0"
+        
+        // MultiDex support for large apps
+        multiDexEnabled = true
     }
 
     buildTypes {
