@@ -218,7 +218,7 @@ class DashboardView extends StatelessWidget {
                         child: InkWell(
                           onTap: () {
                             appearanceController.toggleTheme();
-                            Get.snackbar(
+                            /*Get.snackbar(
                               isDark ? '☀️ Light Mode' : '🌙 Dark Mode',
                               isDark
                                   ? 'Switched to light theme'
@@ -231,7 +231,7 @@ class DashboardView extends StatelessWidget {
                               colorText: Colors.white,
                               margin: EdgeInsets.all(16),
                               borderRadius: 12,
-                            );
+                            );*/
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(

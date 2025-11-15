@@ -46,7 +46,7 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
 
   @override
   Widget build(BuildContext context) {
-    final currentWidth = _isWidthExpanded ? expandedWidth : collapsedWidth;
+    final currentWidth = collapsedWidth;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -106,12 +106,10 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
                   padding: const EdgeInsets.all(10.0),
                   child: IconButton(
                     icon: Icon(
-                      _isWidthExpanded
-                          ? Iconsax.arrow_left_2
-                          : Iconsax.arrow_right_3,
+                      Iconsax.logout,
                     ),
-                    onPressed: _toggleTitles,
-                    tooltip: _isWidthExpanded ? 'Collapse Menu' : 'Expand Menu',
+                    onPressed: null,
+                    tooltip: 'Logout'
                   ),
                 ),
                 // hide / reveal titles button - when hidden only icons sho

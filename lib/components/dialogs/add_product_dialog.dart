@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../controllers/product_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../models/product_model.dart';
 import '../../utils/colors.dart';
 import '../../services/image_storage_service.dart';
@@ -81,35 +82,101 @@ class _AddProductDialogState extends State<AddProductDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.product != null;
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: 900,
-        height: 700,
-        child: Column(
-          children: [
-            _buildHeader(isEdit),
-            Expanded(
-              child: Row(
-                children: [
-                  _buildStepper(),
-                  Expanded(child: _buildStepContent()),
-                ],
+    return Theme(
+      data: isDark
+          ? ThemeData.dark().copyWith(
+              colorScheme: ColorScheme.dark(
+                primary: AppColors.darkPrimary,
+                surface: AppColors.darkSurface,
+              ),
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: AppColors.darkSurfaceVariant,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.getDivider(true)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.getDivider(true)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: AppColors.darkPrimary,
+                    width: 2,
+                  ),
+                ),
+                labelStyle: TextStyle(color: AppColors.getTextSecondary(true)),
+                hintStyle: TextStyle(color: AppColors.getTextTertiary(true)),
+              ),
+              textTheme: TextTheme(
+                bodyLarge: TextStyle(color: AppColors.getTextPrimary(true)),
+                bodyMedium: TextStyle(color: AppColors.getTextPrimary(true)),
+              ),
+            )
+          : ThemeData.light().copyWith(
+              colorScheme: ColorScheme.light(
+                primary: AppColors.primary,
+                surface: Colors.white,
+              ),
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                ),
               ),
             ),
-            _buildFooter(isEdit),
-          ],
+      child: Dialog(
+        backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 900,
+          height: 700,
+          child: Column(
+            children: [
+              _buildHeader(isEdit, isDark),
+              Expanded(
+                child: Row(
+                  children: [
+                    _buildStepper(isDark),
+                    Expanded(child: _buildStepContent(isDark)),
+                  ],
+                ),
+              ),
+              _buildFooter(isEdit, isDark),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(bool isEdit) {
+  Widget _buildHeader(bool isEdit, bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  AppColors.darkPrimary,
+                  AppColors.darkPrimary.withValues(alpha: 0.8),
+                ]
+              : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+        ),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
@@ -143,7 +210,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildStepper() {
+  Widget _buildStepper(bool isDark) {
     final steps = [
       {'icon': Iconsax.box, 'label': 'Basic Info'},
       {'icon': Iconsax.dollar_circle, 'label': 'Pricing'},
@@ -154,7 +221,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     return Container(
       width: 200,
       padding: EdgeInsets.all(24),
-      color: Colors.grey[50],
+      color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(steps.length, (index) {
@@ -171,10 +238,10 @@ class _AddProductDialogState extends State<AddProductDialog> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? AppColors.primary
+                        ? (isDark ? AppColors.darkPrimary : AppColors.primary)
                         : isCompleted
                         ? Colors.green
-                        : Colors.grey[300],
+                        : (isDark ? Colors.grey[700] : Colors.grey[300]),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -191,7 +258,9 @@ class _AddProductDialogState extends State<AddProductDialog> {
                       fontWeight: isActive
                           ? FontWeight.bold
                           : FontWeight.normal,
-                      color: isActive ? AppColors.primary : Colors.grey[600],
+                      color: isActive
+                          ? (isDark ? AppColors.darkPrimary : AppColors.primary)
+                          : AppColors.getTextSecondary(isDark),
                     ),
                   ),
                 ),
@@ -203,41 +272,45 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildStepContent() {
+  Widget _buildStepContent(bool isDark) {
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
         padding: EdgeInsets.all(24),
-        child: _getStepWidget(),
+        child: _getStepWidget(isDark),
       ),
     );
   }
 
-  Widget _getStepWidget() {
+  Widget _getStepWidget(bool isDark) {
     switch (_currentStep) {
       case 0:
-        return _buildBasicInfoStep();
+        return _buildBasicInfoStep(isDark);
       case 1:
-        return _buildPricingStep();
+        return _buildPricingStep(isDark);
       case 2:
-        return _buildVariantsStep();
+        return _buildVariantsStep(isDark);
       case 3:
-        return _buildReviewStep();
+        return _buildReviewStep(isDark);
       default:
-        return _buildBasicInfoStep();
+        return _buildBasicInfoStep(isDark);
     }
   }
 
-  Widget _buildBasicInfoStep() {
+  Widget _buildBasicInfoStep(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Basic Information',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.getTextPrimary(isDark),
+          ),
         ),
         SizedBox(height: 24),
-        _buildImagePicker(),
+        _buildImagePicker(isDark),
         SizedBox(height: 24),
         TextFormField(
           controller: _nameController,
@@ -364,7 +437,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildPricingStep() {
+  Widget _buildPricingStep(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -510,7 +583,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildVariantsStep() {
+  Widget _buildVariantsStep(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -602,7 +675,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildReviewStep() {
+  Widget _buildReviewStep(bool isDark) {
     final sellingPrice = double.tryParse(_priceController.text) ?? 0;
     final costPrice = double.tryParse(_costPriceController.text) ?? 0;
     final stock = int.tryParse(_stockController.text) ?? 0;
@@ -689,7 +762,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildImagePicker() {
+  Widget _buildImagePicker(bool isDark) {
     return Center(
       child: GestureDetector(
         onTap: _pickImage,
@@ -735,7 +808,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildFooter(bool isEdit) {
+  Widget _buildFooter(bool isEdit, bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(

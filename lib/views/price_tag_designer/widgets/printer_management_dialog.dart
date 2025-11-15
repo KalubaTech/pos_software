@@ -15,8 +15,11 @@ class PrinterManagementDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<PrinterController>();
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
 
     return Dialog(
+      backgroundColor: AppColors.getSurfaceColor(isDark),
       child: Container(
         width: 700,
         height: 600,
@@ -26,15 +29,26 @@ class PrinterManagementDialog extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Iconsax.printer, color: AppColors.primary, size: 28),
+                Icon(
+                  Iconsax.printer,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                  size: 28,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Printer Management',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
                 Spacer(),
                 IconButton(
-                  icon: Icon(Iconsax.close_circle),
+                  icon: Icon(
+                    Iconsax.close_circle,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   onPressed: () => Get.back(),
                 ),
               ],
@@ -45,27 +59,34 @@ class PrinterManagementDialog extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Configure your printers for printing price tags',
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: AppColors.getTextSecondary(isDark)),
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => _showAddPrinterDialog(context, controller),
+                  onPressed: () =>
+                      _showAddPrinterDialog(context, controller, isDark),
                   icon: Icon(Iconsax.add, size: 18),
                   label: Text('Add Printer'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: isDark
+                        ? AppColors.darkPrimary
+                        : AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
                 ),
               ],
             ),
             SizedBox(height: 20),
-            Divider(),
+            Divider(color: AppColors.getDivider(isDark)),
             SizedBox(height: 16),
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
-                  return Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    ),
+                  );
                 }
 
                 if (controller.printers.isEmpty) {
@@ -76,14 +97,14 @@ class PrinterManagementDialog extends StatelessWidget {
                         Icon(
                           Iconsax.printer,
                           size: 64,
-                          color: Colors.grey[300],
+                          color: isDark ? Colors.grey[700] : Colors.grey[300],
                         ),
                         SizedBox(height: 16),
                         Text(
                           'No printers configured',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: AppColors.getTextSecondary(isDark),
                           ),
                         ),
                         SizedBox(height: 8),
@@ -91,7 +112,7 @@ class PrinterManagementDialog extends StatelessWidget {
                           'Add a printer to start printing',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[500],
+                            color: AppColors.getTextTertiary(isDark),
                           ),
                         ),
                       ],
@@ -229,6 +250,7 @@ class PrinterManagementDialog extends StatelessWidget {
   void _showAddPrinterDialog(
     BuildContext context,
     PrinterController controller,
+    bool isDark,
   ) {
     final nameController = TextEditingController();
     final addressController = TextEditingController();
@@ -242,11 +264,18 @@ class PrinterManagementDialog extends StatelessWidget {
       StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
+            backgroundColor: AppColors.getSurfaceColor(isDark),
             title: Row(
               children: [
-                Icon(Iconsax.add_circle, color: AppColors.primary),
+                Icon(
+                  Iconsax.add_circle,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
-                Text('Add Printer'),
+                Text(
+                  'Add Printer',
+                  style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                ),
               ],
             ),
             content: Container(
@@ -257,19 +286,60 @@ class PrinterManagementDialog extends StatelessWidget {
                   children: [
                     TextField(
                       controller: nameController,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                       decoration: InputDecoration(
                         labelText: 'Printer Name',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Iconsax.printer),
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.printer,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                     ),
                     SizedBox(height: 16),
                     DropdownButtonFormField<PrinterType>(
                       value: selectedType,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      dropdownColor: AppColors.getSurfaceColor(isDark),
                       decoration: InputDecoration(
                         labelText: 'Printer Type',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Iconsax.category),
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.category,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                       items: PrinterType.values.map((type) {
                         return DropdownMenuItem(
@@ -286,10 +356,31 @@ class PrinterManagementDialog extends StatelessWidget {
                     SizedBox(height: 16),
                     DropdownButtonFormField<ConnectionType>(
                       value: selectedConnection,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      dropdownColor: AppColors.getSurfaceColor(isDark),
                       decoration: InputDecoration(
                         labelText: 'Connection Type',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Iconsax.link),
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.link,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                       items: ConnectionType.values.map((type) {
                         return DropdownMenuItem(
@@ -307,23 +398,67 @@ class PrinterManagementDialog extends StatelessWidget {
                       SizedBox(height: 16),
                       TextField(
                         controller: addressController,
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
                         decoration: InputDecoration(
                           labelText: 'IP Address',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Iconsax.global),
+                          labelStyle: TextStyle(
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                          prefixIcon: Icon(
+                            Iconsax.global,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurfaceVariant
+                              : Colors.grey[50],
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: portController,
                         keyboardType: TextInputType.number,
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
                         ],
                         decoration: InputDecoration(
                           labelText: 'Port',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Iconsax.link_1),
+                          labelStyle: TextStyle(
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                          prefixIcon: Icon(
+                            Iconsax.link_1,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurfaceVariant
+                              : Colors.grey[50],
                         ),
                       ),
                     ],
@@ -334,10 +469,32 @@ class PrinterManagementDialog extends StatelessWidget {
                           Expanded(
                             child: TextField(
                               controller: addressController,
+                              style: TextStyle(
+                                color: AppColors.getTextPrimary(isDark),
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Bluetooth Address',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Iconsax.bluetooth),
+                                labelStyle: TextStyle(
+                                  color: AppColors.getTextSecondary(isDark),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: AppColors.getDivider(isDark),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: AppColors.getDivider(isDark),
+                                  ),
+                                ),
+                                prefixIcon: Icon(
+                                  Iconsax.bluetooth,
+                                  color: AppColors.getTextSecondary(isDark),
+                                ),
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.darkSurfaceVariant
+                                    : Colors.grey[50],
                               ),
                             ),
                           ),
@@ -347,11 +504,14 @@ class PrinterManagementDialog extends StatelessWidget {
                               context,
                               addressController,
                               nameController,
+                              isDark,
                             ),
                             icon: Icon(Iconsax.scan, size: 16),
                             label: Text('Scan'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: isDark
+                                  ? AppColors.darkPrimary
+                                  : AppColors.primary,
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -361,10 +521,31 @@ class PrinterManagementDialog extends StatelessWidget {
                     SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       value: selectedPaperWidth,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      dropdownColor: AppColors.getSurfaceColor(isDark),
                       decoration: InputDecoration(
                         labelText: 'Paper Width',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Iconsax.maximize_4),
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.maximize_4,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
                       ),
                       items: [58, 80].map((width) {
                         return DropdownMenuItem(
@@ -380,8 +561,16 @@ class PrinterManagementDialog extends StatelessWidget {
                     ),
                     SizedBox(height: 16),
                     CheckboxListTile(
-                      title: Text('Set as default printer'),
+                      title: Text(
+                        'Set as default printer',
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                      ),
                       value: setAsDefault,
+                      activeColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
                       onChanged: (value) {
                         setState(() => setAsDefault = value ?? false);
                       },
@@ -392,7 +581,13 @@ class PrinterManagementDialog extends StatelessWidget {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('Cancel'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.getTextSecondary(isDark),
+                ),
+              ),
               ElevatedButton(
                 onPressed: () async {
                   if (nameController.text.trim().isEmpty) {
@@ -417,7 +612,9 @@ class PrinterManagementDialog extends StatelessWidget {
                   Get.back();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: isDark
+                      ? AppColors.darkPrimary
+                      : AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
                 child: Text('Add Printer'),
@@ -469,6 +666,7 @@ class PrinterManagementDialog extends StatelessWidget {
     BuildContext context,
     TextEditingController addressController,
     TextEditingController nameController,
+    bool isDark,
   ) {
     Get.dialog(
       StatefulBuilder(
@@ -503,11 +701,18 @@ class PrinterManagementDialog extends StatelessWidget {
           Future.delayed(Duration.zero, () => scanDevices());
 
           return AlertDialog(
+            backgroundColor: AppColors.getSurfaceColor(isDark),
             title: Row(
               children: [
-                Icon(Iconsax.bluetooth, color: AppColors.primary),
+                Icon(
+                  Iconsax.bluetooth,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
                 SizedBox(width: 12),
-                Text('Scan for Bluetooth Printers'),
+                Text(
+                  'Scan for Bluetooth Printers',
+                  style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                ),
               ],
             ),
             content: Container(

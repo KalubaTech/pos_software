@@ -4,7 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:animate_do/animate_do.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/auth_controller.dart';
-import '../../controllers/business_settings_controller.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../services/printer_service.dart';
 import '../../models/transaction_model.dart';
 import '../../utils/colors.dart';
@@ -48,45 +48,54 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
 
   @override
   Widget build(BuildContext context) {
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
+
     return Dialog(
+      backgroundColor: AppColors.getSurfaceColor(isDark),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 600,
         constraints: BoxConstraints(maxHeight: 700),
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(isDark),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildOrderSummary(),
+                    _buildOrderSummary(isDark),
                     SizedBox(height: 24),
-                    _buildPaymentMethods(),
+                    _buildPaymentMethods(isDark),
                     SizedBox(height: 24),
                     if (selectedMethod == PaymentMethod.cash)
-                      _buildCashPayment(),
+                      _buildCashPayment(isDark),
                     SizedBox(height: 24),
-                    _buildPrintOption(),
+                    _buildPrintOption(isDark),
                   ],
                 ),
               ),
             ),
-            _buildFooter(),
+            _buildFooter(isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+          colors: isDark
+              ? [
+                  AppColors.darkPrimary,
+                  AppColors.darkPrimary.withValues(alpha: 0.8),
+                ]
+              : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
         ),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -135,15 +144,15 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     );
   }
 
-  Widget _buildOrderSummary() {
+  Widget _buildOrderSummary(bool isDark) {
     return FadeInUp(
       duration: Duration(milliseconds: 400),
       child: Container(
         padding: EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[200]!),
+          border: Border.all(color: AppColors.getDivider(isDark)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,19 +162,27 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               children: [
                 Text(
                   'Order Summary',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
                 Obx(
                   () => Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color:
+                          (isDark ? AppColors.darkPrimary : AppColors.primary)
+                              .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '${widget.cartController.itemCount} items',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -174,11 +191,12 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                 ),
               ],
             ),
-            Divider(height: 24),
+            Divider(height: 24, color: AppColors.getDivider(isDark)),
             Obx(
               () => _buildSummaryRow(
                 'Subtotal',
                 CurrencyFormatter.format(widget.cartController.subtotal),
+                isDark: isDark,
               ),
             ),
             SizedBox(height: 8),
@@ -186,6 +204,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               () => _buildSummaryRow(
                 'Tax (8%)',
                 CurrencyFormatter.format(widget.cartController.tax),
+                isDark: isDark,
               ),
             ),
             SizedBox(height: 8),
@@ -197,17 +216,19 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                     'Discount',
                     '-${CurrencyFormatter.format(widget.cartController.discount.value)}',
                     color: Colors.green,
+                    isDark: isDark,
                   ),
                 );
               }
               return SizedBox();
             }),
-            Divider(height: 16),
+            Divider(height: 16, color: AppColors.getDivider(isDark)),
             Obx(
               () => _buildSummaryRow(
                 'TOTAL',
                 CurrencyFormatter.format(widget.cartController.total),
                 large: true,
+                isDark: isDark,
               ),
             ),
           ],
@@ -221,6 +242,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     String value, {
     bool large = false,
     Color? color,
+    required bool isDark,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -230,7 +252,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
           style: TextStyle(
             fontSize: large ? 18 : 14,
             fontWeight: large ? FontWeight.bold : FontWeight.normal,
-            color: color ?? Colors.black87,
+            color: color ?? AppColors.getTextPrimary(isDark),
           ),
         ),
         Text(
@@ -238,14 +260,18 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
           style: TextStyle(
             fontSize: large ? 22 : 14,
             fontWeight: large ? FontWeight.bold : FontWeight.w600,
-            color: color ?? (large ? AppColors.primary : Colors.black87),
+            color:
+                color ??
+                (large
+                    ? (isDark ? AppColors.darkPrimary : AppColors.primary)
+                    : AppColors.getTextPrimary(isDark)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPaymentMethods() {
+  Widget _buildPaymentMethods(bool isDark) {
     return FadeInUp(
       duration: Duration(milliseconds: 500),
       child: Column(
@@ -253,7 +279,11 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
         children: [
           Text(
             'Payment Method',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
           ),
           SizedBox(height: 16),
           GridView.count(
@@ -264,17 +294,29 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
             childAspectRatio: 1.2,
             physics: NeverScrollableScrollPhysics(),
             children: [
-              _buildPaymentOption(PaymentMethod.cash, Iconsax.money, 'Cash'),
-              _buildPaymentOption(PaymentMethod.card, Iconsax.card, 'Card'),
+              _buildPaymentOption(
+                PaymentMethod.cash,
+                Iconsax.money,
+                'Cash',
+                isDark,
+              ),
+              _buildPaymentOption(
+                PaymentMethod.card,
+                Iconsax.card,
+                'Card',
+                isDark,
+              ),
               _buildPaymentOption(
                 PaymentMethod.mobile,
                 Iconsax.mobile,
                 'Mobile',
+                isDark,
               ),
               _buildPaymentOption(
                 PaymentMethod.other,
                 Iconsax.wallet_3,
                 'Other',
+                isDark,
               ),
             ],
           ),
@@ -287,6 +329,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     PaymentMethod method,
     IconData icon,
     String label,
+    bool isDark,
   ) {
     final isSelected = selectedMethod == method;
 
@@ -297,16 +340,21 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
         duration: Duration(milliseconds: 200),
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSelected
+              ? (isDark ? AppColors.darkPrimary : AppColors.primary)
+              : (isDark ? AppColors.darkSurface : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey[300]!,
+            color: isSelected
+                ? (isDark ? AppColors.darkPrimary : AppColors.primary)
+                : AppColors.getDivider(isDark),
             width: 2,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
+                    color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                        .withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: Offset(0, 4),
                   ),
@@ -319,7 +367,9 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
             Icon(
               icon,
               size: 32,
-              color: isSelected ? Colors.white : Colors.grey[700],
+              color: isSelected
+                  ? Colors.white
+                  : AppColors.getTextSecondary(isDark),
             ),
             SizedBox(height: 8),
             Text(
@@ -327,7 +377,9 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.grey[700],
+                color: isSelected
+                    ? Colors.white
+                    : AppColors.getTextPrimary(isDark),
               ),
             ),
           ],
@@ -336,7 +388,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     );
   }
 
-  Widget _buildCashPayment() {
+  Widget _buildCashPayment(bool isDark) {
     return FadeInUp(
       duration: Duration(milliseconds: 600),
       child: Column(
@@ -344,23 +396,49 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
         children: [
           Text(
             'Amount Received',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
           ),
           SizedBox(height: 12),
           TextField(
             controller: amountController,
             keyboardType: TextInputType.number,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
             decoration: InputDecoration(
-              prefixIcon: Icon(Iconsax.dollar_circle, size: 28),
+              prefixIcon: Icon(
+                Iconsax.dollar_circle,
+                size: 28,
+                color: isDark ? AppColors.darkPrimary : AppColors.primary,
+              ),
               hintText: '0.00',
+              hintStyle: TextStyle(color: AppColors.getTextSecondary(isDark)),
+              filled: true,
+              fillColor: isDark
+                  ? AppColors.darkSurfaceVariant
+                  : Colors.grey[50],
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primary),
+                borderSide: BorderSide(
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
+                borderSide: BorderSide(
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                  width: 2,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.getDivider(isDark)),
               ),
             ),
             onChanged: (value) => setState(() {}),
@@ -375,7 +453,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               return Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: Colors.green.withValues(alpha: isDark ? 0.2 : 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Colors.green.withValues(alpha: 0.3),
@@ -389,7 +467,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
+                        color: isDark ? Colors.green[400] : Colors.green[700],
                       ),
                     ),
                     Obx(
@@ -398,7 +476,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
+                          color: isDark ? Colors.green[400] : Colors.green[700],
                         ),
                       ),
                     ),
@@ -409,7 +487,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               return Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Colors.orange.withValues(alpha: isDark ? 0.2 : 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Colors.orange.withValues(alpha: 0.3),
@@ -417,12 +495,15 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                 ),
                 child: Row(
                   children: [
-                    Icon(Iconsax.warning_2, color: Colors.orange[700]),
+                    Icon(
+                      Iconsax.warning_2,
+                      color: isDark ? Colors.orange[400] : Colors.orange[700],
+                    ),
                     SizedBox(width: 12),
                     Text(
                       'Amount received is less than total',
                       style: TextStyle(
-                        color: Colors.orange[700],
+                        color: isDark ? Colors.orange[400] : Colors.orange[700],
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -436,7 +517,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     );
   }
 
-  Widget _buildPrintOption() {
+  Widget _buildPrintOption(bool isDark) {
     // Don't show print option if printer service not available
     if (printerService == null) {
       return SizedBox.shrink();
@@ -451,20 +532,30 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isPrinterConnected
-                ? Colors.blue.withValues(alpha: 0.05)
-                : Colors.grey.withValues(alpha: 0.05),
+                ? (isDark
+                      ? Colors.blue.withValues(alpha: 0.2)
+                      : Colors.blue.withValues(alpha: 0.05))
+                : (isDark
+                      ? Colors.grey.withValues(alpha: 0.2)
+                      : Colors.grey.withValues(alpha: 0.05)),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isPrinterConnected
-                  ? Colors.blue.withValues(alpha: 0.2)
-                  : Colors.grey.withValues(alpha: 0.2),
+                  ? (isDark
+                        ? Colors.blue.withValues(alpha: 0.4)
+                        : Colors.blue.withValues(alpha: 0.2))
+                  : (isDark
+                        ? Colors.grey.withValues(alpha: 0.3)
+                        : Colors.grey.withValues(alpha: 0.2)),
             ),
           ),
           child: Row(
             children: [
               Icon(
                 Iconsax.printer,
-                color: isPrinterConnected ? Colors.blue : Colors.grey[600],
+                color: isPrinterConnected
+                    ? (isDark ? Colors.blue[400] : Colors.blue)
+                    : AppColors.getTextSecondary(isDark),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -476,13 +567,17 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
+                        color: AppColors.getTextPrimary(isDark),
                       ),
                     ),
                     Text(
                       isPrinterConnected
                           ? 'Printer connected'
                           : 'No printer connected',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                     ),
                   ],
                 ),
@@ -492,7 +587,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
                 onChanged: isPrinterConnected
                     ? (value) => setState(() => printReceipt = value)
                     : null,
-                activeColor: AppColors.primary,
+                activeColor: isDark ? AppColors.darkPrimary : AppColors.primary,
               ),
             ],
           ),
@@ -501,15 +596,15 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(bool isDark) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: Offset(0, -2),
           ),
@@ -522,10 +617,11 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               onPressed: isProcessing ? null : () => Get.back(),
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: Colors.grey[300]!),
+                side: BorderSide(color: AppColors.getDivider(isDark)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                foregroundColor: AppColors.getTextSecondary(isDark),
               ),
               child: Text(
                 'Cancel',
@@ -540,7 +636,9 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               onPressed: isProcessing ? null : _processPayment,
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: AppColors.primary,
+                backgroundColor: isDark
+                    ? AppColors.darkPrimary
+                    : AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

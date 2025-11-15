@@ -21,9 +21,7 @@ class PropertiesPanelWidget extends StatelessWidget {
       return Container(
         width: 300,
         height: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceColor(isDark),
-        ),
+        decoration: BoxDecoration(color: AppColors.getSurfaceColor(isDark)),
         child: Obx(() {
           final element = controller.selectedElement.value;
           final template = controller.currentTemplate.value;
@@ -122,8 +120,9 @@ class PropertiesPanelWidget extends StatelessWidget {
                 ),
                 isDense: true,
                 filled: true,
-                fillColor:
-                    isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : Colors.grey[50],
               ),
               onChanged: (value) => controller.updateTemplateName(value),
             ),
@@ -147,8 +146,9 @@ class PropertiesPanelWidget extends StatelessWidget {
                 ),
                 isDense: true,
                 filled: true,
-                fillColor:
-                    isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : Colors.grey[50],
               ),
               onChanged: (value) {
                 final width = double.tryParse(value) ?? template.width;
@@ -175,8 +175,9 @@ class PropertiesPanelWidget extends StatelessWidget {
                 ),
                 isDense: true,
                 filled: true,
-                fillColor:
-                    isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
+                fillColor: isDark
+                    ? AppColors.darkSurfaceVariant
+                    : Colors.grey[50],
               ),
               onChanged: (value) {
                 final height = double.tryParse(value) ?? template.height;
@@ -258,9 +259,7 @@ class PropertiesPanelWidget extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.darkSurfaceVariant
-                    : Colors.grey[100],
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[100],
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -483,7 +482,9 @@ class PropertiesPanelWidget extends StatelessWidget {
                         Icon(
                           Iconsax.mouse_circle,
                           size: 12,
-                          color: isDark ? AppColors.darkPrimary : Colors.blue[700],
+                          color: isDark
+                              ? AppColors.darkPrimary
+                              : Colors.blue[700],
                         ),
                         SizedBox(width: 6),
                         Expanded(
@@ -513,14 +514,10 @@ class PropertiesPanelWidget extends StatelessWidget {
                 style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppColors.getDivider(isDark),
-                    ),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppColors.getDivider(isDark),
-                    ),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
                   ),
                   isDense: true,
                   filled: true,
@@ -604,26 +601,24 @@ class PropertiesPanelWidget extends StatelessWidget {
                 ],
                 selected: {element.textAlign},
                 style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                    (Set<WidgetState> states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return isDark
-                            ? AppColors.darkPrimary
-                            : AppColors.primary;
-                      }
-                      return isDark
-                          ? AppColors.darkSurfaceVariant
-                          : Colors.grey[200]!;
-                    },
-                  ),
-                  foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                    (Set<WidgetState> states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Colors.white;
-                      }
-                      return AppColors.getTextPrimary(isDark);
-                    },
-                  ),
+                  backgroundColor: WidgetStateProperty.resolveWith<Color>((
+                    Set<WidgetState> states,
+                  ) {
+                    if (states.contains(WidgetState.selected)) {
+                      return isDark ? AppColors.darkPrimary : AppColors.primary;
+                    }
+                    return isDark
+                        ? AppColors.darkSurfaceVariant
+                        : Colors.grey[200]!;
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith<Color>((
+                    Set<WidgetState> states,
+                  ) {
+                    if (states.contains(WidgetState.selected)) {
+                      return Colors.white;
+                    }
+                    return AppColors.getTextPrimary(isDark);
+                  }),
                 ),
                 onSelectionChanged: (Set<String> newSelection) {
                   controller.updateElement(
@@ -651,14 +646,10 @@ class PropertiesPanelWidget extends StatelessWidget {
                 style: TextStyle(color: AppColors.getTextPrimary(isDark)),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppColors.getDivider(isDark),
-                    ),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: AppColors.getDivider(isDark),
-                    ),
+                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
                   ),
                   isDense: true,
                   hintText: 'Enter data to encode...',
@@ -760,7 +751,9 @@ class PropertiesPanelWidget extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkPrimary.withOpacity(0.15) : Colors.blue[50],
+                  color: isDark
+                      ? AppColors.darkPrimary.withOpacity(0.15)
+                      : Colors.blue[50],
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: isDark
@@ -794,11 +787,7 @@ class PropertiesPanelWidget extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(
-              icon,
-              size: 14,
-              color: AppColors.getTextSecondary(isDark),
-            ),
+            Icon(icon, size: 14, color: AppColors.getTextSecondary(isDark)),
             SizedBox(width: 6),
             Text(
               label,

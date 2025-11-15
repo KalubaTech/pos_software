@@ -1,0 +1,1664 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:animate_do/animate_do.dart';
+import '../../models/subscription_model.dart';
+import '../../services/subscription_service.dart';
+import '../../controllers/appearance_controller.dart';
+import '../../controllers/business_settings_controller.dart';
+import '../../utils/colors.dart';
+import 'package:intl/intl.dart';
+
+class SubscriptionView extends StatefulWidget {
+  const SubscriptionView({super.key});
+
+  @override
+  State<SubscriptionView> createState() => _SubscriptionViewState();
+}
+
+class _SubscriptionViewState extends State<SubscriptionView> {
+  // Observable for tracking payment checking status
+  static final RxBool isCheckingPayment = false.obs;
+  static final RxString checkingReference = ''.obs;
+  static final RxInt checkingAttempt = 0.obs;
+  static final RxInt maxAttempts = 5.obs;
+
+  // Observable for result notification
+  static final RxBool showResultNotification = false.obs;
+  static final RxString resultTitle = ''.obs;
+  static final RxString resultMessage = ''.obs;
+  static final RxString resultType =
+      'info'.obs; // success, error, warning, info
+
+  // Scroll controller to scroll to top when checking starts
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // Helper method to show result notification
+  void _showResultNotification({
+    required String title,
+    required String message,
+    required String type, // success, error, warning, info
+  }) {
+    resultTitle.value = title;
+    resultMessage.value = message;
+    resultType.value = type;
+    showResultNotification.value = true;
+
+    // Scroll to top to show notification
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+
+    // NOTE: Notification stays visible until user manually dismisses it
+    // No auto-dismiss - user must click the close button (×)
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subscriptionService = Get.find<SubscriptionService>();
+    final appearanceController = Get.find<AppearanceController>();
+    final businessController = Get.find<BusinessSettingsController>();
+
+    return Obx(() {
+      final isDark = appearanceController.isDarkMode.value;
+      final currentSubscription = subscriptionService.currentSubscription.value;
+
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
+        body: SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(isDark),
+              SizedBox(height: 24),
+              // Result notification card
+              Obx(() {
+                if (showResultNotification.value) {
+                  return FadeInDown(
+                    duration: Duration(milliseconds: 300),
+                    child: _buildResultNotificationCard(isDark),
+                  );
+                }
+                return SizedBox.shrink();
+              }),
+              if (showResultNotification.value) SizedBox(height: 16),
+              // Payment checking status card
+              Obx(() {
+                if (isCheckingPayment.value) {
+                  return FadeInDown(
+                    duration: Duration(milliseconds: 300),
+                    child: _buildCheckingStatusCard(isDark),
+                  );
+                }
+                return SizedBox.shrink();
+              }),
+              if (isCheckingPayment.value) SizedBox(height: 24),
+              if (currentSubscription != null)
+                FadeInUp(
+                  duration: Duration(milliseconds: 300),
+                  child: _buildCurrentSubscriptionCard(
+                    currentSubscription,
+                    isDark,
+                  ),
+                ),
+              SizedBox(height: 32),
+              FadeInUp(
+                duration: Duration(milliseconds: 400),
+                child: _buildPlansSection(
+                  subscriptionService,
+                  businessController,
+                  isDark,
+                ),
+              ),
+              SizedBox(height: 32),
+              FadeInUp(
+                duration: Duration(milliseconds: 500),
+                child: _buildFeaturesComparison(isDark),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildHeader(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Iconsax.crown_1, color: Colors.blue, size: 28),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Subscription Plans',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Unlock cloud sync and premium features',
+                    style: TextStyle(
+                      color: AppColors.getTextSecondary(isDark),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrentSubscriptionCard(
+    SubscriptionModel subscription,
+    bool isDark,
+  ) {
+    final isActive = subscription.isActive;
+    final isFree = subscription.plan == SubscriptionPlan.free;
+
+    return Container(
+      padding: EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: isActive && !isFree
+            ? LinearGradient(
+                colors: [Colors.blue, Colors.blue.shade700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isActive && !isFree
+            ? null
+            : (isDark ? AppColors.darkSurface : Colors.white),
+        borderRadius: BorderRadius.circular(16),
+        border: !isActive || isFree
+            ? Border.all(color: AppColors.getDivider(isDark))
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isActive ? Iconsax.tick_circle5 : Iconsax.info_circle,
+                color: isActive && !isFree
+                    ? Colors.white
+                    : (isActive ? Colors.green : Colors.orange),
+                size: 40,
+              ),
+              SizedBox(width: 40),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isActive ? 'Current Plan' : 'Expired Plan',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isActive && !isFree
+                            ? Colors.white70
+                            : AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      subscription.planName,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isActive && !isFree
+                            ? Colors.white
+                            : AppColors.getTextPrimary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isFree)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isActive && !isFree
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : (isActive
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.orange.withValues(alpha: 0.1)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isActive ? 'Active' : 'Expired',
+                    style: TextStyle(
+                      color: isActive && !isFree
+                          ? Colors.white
+                          : (isActive ? Colors.green : Colors.orange),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (!isFree) ...[
+            SizedBox(height: 24),
+            Divider(
+              color: isActive && !isFree
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : AppColors.getDivider(isDark),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoItem(
+                    'Start Date',
+                    DateFormat('MMM dd, yyyy').format(subscription.startDate),
+                    isActive && !isFree,
+                    isDark,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: _buildInfoItem(
+                    'End Date',
+                    DateFormat('MMM dd, yyyy').format(subscription.endDate),
+                    isActive && !isFree,
+                    isDark,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoItem(
+                    'Days Remaining',
+                    '${subscription.daysRemaining} days',
+                    isActive && !isFree,
+                    isDark,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: _buildInfoItem(
+                    'Amount Paid',
+                    'K${subscription.amount.toStringAsFixed(2)}',
+                    isActive && !isFree,
+                    isDark,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, bool isLight, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isLight
+                ? Colors.white70
+                : AppColors.getTextSecondary(isDark),
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isLight ? Colors.white : AppColors.getTextPrimary(isDark),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlansSection(
+    SubscriptionService subscriptionService,
+    BusinessSettingsController businessController,
+    bool isDark,
+  ) {
+    final plans = SubscriptionPlanOption.getAllPlans();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose Your Plan',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppColors.getTextPrimary(isDark),
+          ),
+        ),
+        SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.75,
+          ),
+          itemCount: plans.length,
+          itemBuilder: (context, index) {
+            return _buildPlanCard(
+              plans[index],
+              subscriptionService,
+              businessController,
+              isDark,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlanCard(
+    SubscriptionPlanOption plan,
+    SubscriptionService subscriptionService,
+    BusinessSettingsController businessController,
+    bool isDark,
+  ) {
+    final currentPlan = subscriptionService.currentPlan;
+    final isCurrentPlan = currentPlan == plan.plan;
+
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: plan.isPopular
+              ? Colors.blue
+              : (isCurrentPlan ? Colors.green : AppColors.getDivider(isDark)),
+          width: plan.isPopular || isCurrentPlan ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (plan.isPopular)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'BEST VALUE',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          if (plan.isPopular) SizedBox(height: 12),
+          if (isCurrentPlan)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Text(
+                'CURRENT PLAN',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          if (isCurrentPlan) SizedBox(height: 12),
+          Text(
+            plan.title,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            plan.subtitle,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.getTextSecondary(isDark),
+            ),
+          ),
+          SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'K',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue,
+                ),
+              ),
+              Text(
+                plan.price.toStringAsFixed(0),
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4),
+          Text(
+            plan.pricePerMonth,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.getTextSecondary(isDark),
+            ),
+          ),
+          if (plan.savings != null) ...[
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Save K${plan.savings!.toStringAsFixed(0)}',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          SizedBox(height: 20),
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: plan.features.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Iconsax.tick_circle5, color: Colors.green, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          plan.features[index],
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isCurrentPlan
+                  ? null
+                  : () => _showPaymentDialog(
+                      plan,
+                      subscriptionService,
+                      businessController,
+                      isDark,
+                    ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isCurrentPlan ? Colors.grey : Colors.blue,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                isCurrentPlan ? 'Current Plan' : 'Subscribe',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesComparison(bool isDark) {
+    return Container(
+      padding: EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'What\'s Included',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
+          ),
+          SizedBox(height: 20),
+          _buildFeatureRow(
+            'All Offline Features',
+            'POS, Inventory, Sales, Reports',
+            true,
+            isDark,
+          ),
+          _buildFeatureRow(
+            'Cloud Synchronization',
+            'Sync data across devices',
+            false,
+            isDark,
+            premiumOnly: true,
+          ),
+          _buildFeatureRow(
+            'Multi-device Support',
+            'Access from anywhere',
+            false,
+            isDark,
+            premiumOnly: true,
+          ),
+          _buildFeatureRow(
+            'Real-time Sync',
+            'Automatic background sync',
+            false,
+            isDark,
+            premiumOnly: true,
+          ),
+          _buildFeatureRow(
+            'Priority Support',
+            'Get help when you need it',
+            false,
+            isDark,
+            premiumOnly: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureRow(
+    String title,
+    String subtitle,
+    bool alwaysIncluded,
+    bool isDark, {
+    bool premiumOnly = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(
+            alwaysIncluded ? Iconsax.tick_circle5 : Iconsax.crown_1,
+            color: alwaysIncluded ? Colors.green : Colors.blue,
+            size: 24,
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                    ),
+                    if (premiumOnly) ...[
+                      SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'PREMIUM',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultNotificationCard(bool isDark) {
+    // Determine colors and icon based on result type
+    Color backgroundColor;
+    Color borderColor;
+    Color textColor;
+    IconData iconData;
+
+    switch (resultType.value) {
+      case 'success':
+        backgroundColor = Colors.green.withValues(alpha: 0.1);
+        borderColor = Colors.green;
+        textColor = Colors.green.shade700;
+        iconData = Iconsax.tick_circle;
+        break;
+      case 'error':
+        backgroundColor = Colors.red.withValues(alpha: 0.1);
+        borderColor = Colors.red;
+        textColor = Colors.red.shade700;
+        iconData = Iconsax.close_circle;
+        break;
+      case 'warning':
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
+        borderColor = Colors.orange;
+        textColor = Colors.orange.shade700;
+        iconData = Iconsax.warning_2;
+        break;
+      default: // info
+        backgroundColor = Colors.blue.withValues(alpha: 0.1);
+        borderColor = Colors.blue;
+        textColor = Colors.blue.shade700;
+        iconData = Iconsax.info_circle;
+    }
+
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: borderColor.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: borderColor.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(iconData, color: borderColor, size: 28),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        resultTitle.value,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Iconsax.close_square, size: 20),
+                      color: textColor.withValues(alpha: 0.6),
+                      onPressed: () {
+                        showResultNotification.value = false;
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  resultMessage.value,
+                  style: TextStyle(fontSize: 14, color: textColor, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckingStatusCard(bool isDark) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3), width: 2),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Animated loader
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Checking Payment Status...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Obx(
+                      () => Text(
+                        'Attempt ${checkingAttempt.value} of ${maxAttempts.value}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          // Progress bar
+          Obx(() {
+            final progress = checkingAttempt.value / maxAttempts.value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    minHeight: 8,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Iconsax.info_circle,
+                      size: 16,
+                      color: Colors.blue.shade700,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Please approve the payment on your phone',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (checkingReference.value.isNotEmpty) ...[
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Iconsax.document_text,
+                          size: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Ref: ${checkingReference.value}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                              color: Colors.grey.shade700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // Check payment status in background with intervals
+  Future<void> _checkPaymentStatus({
+    required Map<String, dynamic> paymentResult,
+    required SubscriptionPlanOption plan,
+    required SubscriptionService subscriptionService,
+    required BusinessSettingsController businessController,
+    required String operator,
+  }) async {
+    final reference = paymentResult['transactionId'];
+    final lencoReference = paymentResult['lencoReference'];
+    final checkingStatus = true.obs;
+    final showManualCheck = false.obs;
+
+    // Show loading UI
+    isCheckingPayment.value = true;
+    checkingReference.value = lencoReference ?? reference;
+    checkingAttempt.value = 0;
+    maxAttempts.value = 5;
+
+    // Scroll to top to show the checking status card
+    await Future.delayed(
+      Duration(milliseconds: 100),
+    ); // Small delay to ensure UI updates
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+
+    print('=== STARTING BACKGROUND STATUS CHECK ===');
+    print('Reference: $reference');
+    print('Lenco Reference: $lencoReference');
+    print('Will check 5 times with 5-second intervals');
+    print('========================================');
+
+    // Create a custom polling loop to update UI
+    Map<String, dynamic>? confirmed;
+
+    if (paymentResult['success'] == true &&
+        paymentResult['status'] == 'pay-offline') {
+      for (int i = 0; i < 5; i++) {
+        await Future.delayed(Duration(seconds: 5));
+
+        checkingAttempt.value = i + 1;
+        print('Checking status... Attempt ${i + 1}/5');
+
+        final statusCheck = await subscriptionService.checkTransactionStatus(
+          reference,
+          lencoReference: lencoReference,
+        );
+
+        if (statusCheck != null &&
+            statusCheck['success'] == true &&
+            statusCheck['found'] == true) {
+          final currentStatus = statusCheck['status'];
+          print('Current status: $currentStatus');
+
+          if (currentStatus == 'completed') {
+            confirmed = {
+              ...paymentResult,
+              'status': 'completed',
+              'completedAt': statusCheck['completedAt'],
+              'mmAccountName': statusCheck['mmAccountName'],
+              'mmOperatorTxnId': statusCheck['mmOperatorTxnId'],
+              'confirmedViaPolling': true,
+            };
+            break;
+          } else if (currentStatus == 'failed') {
+            confirmed = {
+              'success': false,
+              'error': statusCheck['reasonForFailure'] ?? 'Payment failed',
+              'status': 'failed',
+              'mmAccountName': statusCheck['mmAccountName'],
+            };
+            break;
+          }
+        } else {
+          print('Transaction not found yet, continuing...');
+        }
+      }
+
+      // If still not found after all attempts
+      if (confirmed == null) {
+        confirmed = {
+          'success': false,
+          'error': 'Payment confirmation pending',
+          'status': 'not-found',
+          'note': 'Transaction not found. Please check status manually.',
+          'transactionId': reference,
+          'lencoReference': lencoReference,
+        };
+      }
+    }
+
+    // Hide loading UI
+    isCheckingPayment.value = false;
+    checkingAttempt.value = 0;
+
+    print('=== POLLING COMPLETED ===');
+    print('Result: ${confirmed?.toString()}');
+    print('========================');
+
+    if (confirmed != null) {
+      if (confirmed['status'] == 'completed') {
+        print('✅ Payment COMPLETED - Activating subscription');
+        // Payment successful - activate subscription
+        final success = await subscriptionService.activateSubscription(
+          businessId: businessController.storeName.value.isNotEmpty
+              ? businessController.storeName.value
+              : 'default',
+          plan: plan.plan,
+          transactionId: confirmed['transactionId'],
+          paymentMethod: '$operator (${paymentResult['phone']})',
+        );
+
+        if (success) {
+          _showResultNotification(
+            title: 'Payment Successful! 🎉',
+            message:
+                'Your subscription is now active.\n${confirmed['mmAccountName'] != null ? 'Account: ${confirmed['mmAccountName']}' : ''}',
+            type: 'success',
+          );
+        }
+      } else if (confirmed['status'] == 'failed') {
+        print('❌ Payment FAILED');
+        // Payment failed
+        _showResultNotification(
+          title: 'Payment Failed',
+          message:
+              '${confirmed['error'] ?? 'Payment was declined'}${confirmed['mmAccountName'] != null ? '\nAccount: ${confirmed['mmAccountName']}' : ''}',
+          type: 'error',
+        );
+      } else if (confirmed['status'] == 'not-found') {
+        print('⚠️ Transaction NOT FOUND - Showing manual check button');
+        // Transaction not found after 5 attempts - show manual check button
+        checkingStatus.value = false;
+        showManualCheck.value = true;
+
+        // Show dialog instead of snackbar for better visibility
+        Get.dialog(
+          AlertDialog(
+            backgroundColor: Colors.orange.shade50,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.orange, width: 2),
+            ),
+            title: Row(
+              children: [
+                Icon(Iconsax.info_circle, color: Colors.orange),
+                SizedBox(width: 12),
+                Text(
+                  'Payment Status',
+                  style: TextStyle(color: Colors.orange.shade900),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Transaction not found yet. The payment may still be processing.',
+                  style: TextStyle(fontSize: 14, color: Colors.orange.shade900),
+                ),
+                SizedBox(height: 12),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Transaction Reference:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        reference,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Lenco Reference:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        lencoReference ?? 'N/A',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'You can check the status manually or wait and try again later.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('Later', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Get.back(); // Close dialog first
+                  _manualStatusCheck(
+                    reference: reference,
+                    lencoReference: lencoReference,
+                    plan: plan,
+                    subscriptionService: subscriptionService,
+                    businessController: businessController,
+                    operator: operator,
+                    paymentResult: paymentResult,
+                  );
+                },
+                icon: Icon(Iconsax.refresh, size: 18),
+                label: Text('Check Status Now'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+          barrierDismissible: false,
+        );
+      }
+    }
+  }
+
+  // Manual status check
+  Future<void> _manualStatusCheck({
+    required String reference,
+    required String lencoReference,
+    required SubscriptionPlanOption plan,
+    required SubscriptionService subscriptionService,
+    required BusinessSettingsController businessController,
+    required String operator,
+    required Map<String, dynamic> paymentResult,
+  }) async {
+    // Show loading UI
+    isCheckingPayment.value = true;
+    checkingReference.value = lencoReference;
+    checkingAttempt.value = 1;
+    maxAttempts.value = 1;
+
+    _showResultNotification(
+      title: 'Checking Status...',
+      message: 'Checking payment status for transaction:\n$lencoReference',
+      type: 'info',
+    );
+
+    final statusCheck = await subscriptionService.checkTransactionStatus(
+      reference,
+      lencoReference: lencoReference,
+    );
+
+    // Hide loading UI
+    isCheckingPayment.value = false;
+
+    if (statusCheck != null && statusCheck['success'] == true) {
+      if (statusCheck['found'] == true) {
+        final status = statusCheck['status'];
+
+        if (status == 'completed') {
+          // Activate subscription
+          final success = await subscriptionService.activateSubscription(
+            businessId: businessController.storeName.value.isNotEmpty
+                ? businessController.storeName.value
+                : 'default',
+            plan: plan.plan,
+            transactionId: reference,
+            paymentMethod: '$operator (${paymentResult['phone']})',
+          );
+
+          if (success) {
+            _showResultNotification(
+              title: 'Payment Successful! 🎉',
+              message:
+                  'Your subscription is now active.\n${statusCheck['mmAccountName'] != null ? 'Account: ${statusCheck['mmAccountName']}' : ''}',
+              type: 'success',
+            );
+          }
+        } else if (status == 'failed') {
+          _showResultNotification(
+            title: 'Payment Failed',
+            message:
+                '${statusCheck['reasonForFailure'] ?? 'Payment was declined'}${statusCheck['mmAccountName'] != null ? '\nAccount: ${statusCheck['mmAccountName']}' : ''}',
+            type: 'error',
+          );
+        } else {
+          _showResultNotification(
+            title: 'Payment Pending',
+            message:
+                'Payment is still being processed.\nCurrent status: $status',
+            type: 'warning',
+          );
+        }
+      } else {
+        _showResultNotification(
+          title: 'Transaction Not Found',
+          message:
+              'Transaction not found yet. Please try again in a few moments.\nLenco Ref: $lencoReference',
+          type: 'warning',
+        );
+      }
+    } else {
+      _showResultNotification(
+        title: 'Error',
+        message:
+            statusCheck?['error'] ??
+            'Failed to check payment status. Please try again.',
+        type: 'error',
+      );
+    }
+  }
+
+  void _showPaymentDialog(
+    SubscriptionPlanOption plan,
+    SubscriptionService subscriptionService,
+    BusinessSettingsController businessController,
+    bool isDark,
+  ) {
+    final phoneController = TextEditingController();
+    final paymentMethod = 'Mobile Money'.obs;
+    final isProcessing = false.obs;
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 500,
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Iconsax.card, color: Colors.blue),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Complete Payment',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24),
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Plan:',
+                          style: TextStyle(
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                        Text(
+                          plan.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Amount:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                        Text(
+                          'K${plan.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 24),
+              Obx(
+                () => DropdownButtonFormField<String>(
+                  value: paymentMethod.value,
+                  style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                  dropdownColor: AppColors.getSurfaceColor(isDark),
+                  decoration: InputDecoration(
+                    labelText: 'Payment Method',
+                    labelStyle: TextStyle(
+                      color: AppColors.getTextSecondary(isDark),
+                    ),
+                    prefixIcon: Icon(
+                      Iconsax.wallet,
+                      color: AppColors.getTextSecondary(isDark),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  items:
+                      [
+                        'Mobile Money',
+                        'MTN Mobile Money',
+                        'Airtel Money',
+                        'Zamtel Kwacha',
+                      ].map((method) {
+                        return DropdownMenuItem(
+                          value: method,
+                          child: Text(method),
+                        );
+                      }).toList(),
+                  onChanged: (value) {
+                    if (value != null) paymentMethod.value = value;
+                  },
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  labelStyle: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  hintText: '0977123456',
+                  prefixIcon: Icon(
+                    Iconsax.call,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              SizedBox(height: 24),
+              Obx(
+                () => Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: isProcessing.value ? null : () => Get.back(),
+                      child: Text('Cancel'),
+                    ),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: isProcessing.value
+                          ? null
+                          : () async {
+                              if (phoneController.text.isEmpty) {
+                                _showResultNotification(
+                                  title: 'Missing Information',
+                                  message:
+                                      'Please enter your phone number to continue.',
+                                  type: 'warning',
+                                );
+                                return;
+                              }
+
+                              isProcessing.value = true;
+
+                              Get.back();
+
+                              try {
+                                // Determine operator from phone or payment method
+                                String operator;
+                                if (paymentMethod.value == 'MTN Mobile Money') {
+                                  operator = 'mtn';
+                                } else if (paymentMethod.value ==
+                                    'Airtel Money') {
+                                  operator = 'airtel';
+                                } else if (paymentMethod.value ==
+                                    'Zamtel Kwacha') {
+                                  operator = 'zamtel';
+                                } else {
+                                  // Auto-detect from phone number
+                                  operator =
+                                      subscriptionService.detectOperator(
+                                        phoneController.text,
+                                      ) ??
+                                      'airtel'; // Default to airtel
+                                }
+
+                                // Format phone number
+                                final formattedPhone = subscriptionService
+                                    .formatPhoneNumber(phoneController.text);
+
+                                // Show initiating message
+                                _showResultNotification(
+                                  title: 'Processing Payment...',
+                                  message:
+                                      'Initiating payment to $formattedPhone via ${operator.toUpperCase()}',
+                                  type: 'info',
+                                );
+
+                                // Process payment with real API
+                                final paymentResult = await subscriptionService
+                                    .processPayment(
+                                      plan: plan.plan,
+                                      businessId:
+                                          businessController
+                                              .storeName
+                                              .value
+                                              .isNotEmpty
+                                          ? businessController.storeName.value
+                                          : 'default',
+                                      phoneNumber: formattedPhone,
+                                      operator: operator,
+                                    );
+
+                                // Check if payment was initiated successfully
+                                if (subscriptionService.isPaymentSuccessful(
+                                  paymentResult,
+                                )) {
+                                  final status = paymentResult!['status'];
+
+                                  print('=== PAYMENT RESULT ===');
+                                  print('Status: $status');
+                                  print(
+                                    'Transaction ID: ${paymentResult['transactionId']}',
+                                  );
+                                  print(
+                                    'Lenco Reference: ${paymentResult['lencoReference']}',
+                                  );
+                                  print('====================');
+
+                                  if (status == 'pay-offline') {
+                                    // Close the dialog immediately
+
+                                    print(
+                                      'Dialog closed - starting background status checking',
+                                    );
+
+                                    // Show approval message
+                                    _showResultNotification(
+                                      title: 'Approval Required 📱',
+                                      message:
+                                          'Please check your phone and approve the payment request. We are checking the status automatically...',
+                                      type: 'warning',
+                                    );
+
+                                    // Start checking status in background
+                                    _checkPaymentStatus(
+                                      paymentResult: paymentResult,
+                                      plan: plan,
+                                      subscriptionService: subscriptionService,
+                                      businessController: businessController,
+                                      operator: operator,
+                                    );
+                                  } else if (status == 'completed') {
+                                    // Payment already completed (instant payment)
+                                    final success = await subscriptionService
+                                        .activateSubscription(
+                                          businessId:
+                                              businessController
+                                                  .storeName
+                                                  .value
+                                                  .isNotEmpty
+                                              ? businessController
+                                                    .storeName
+                                                    .value
+                                              : 'default',
+                                          plan: plan.plan,
+                                          transactionId:
+                                              paymentResult['transactionId'],
+                                          paymentMethod:
+                                              '$operator (${paymentResult['phone']})',
+                                        );
+
+                                    if (success) {
+                                      Get.back();
+                                      _showResultNotification(
+                                        title: 'Payment Successful! 🎉',
+                                        message:
+                                            'Your subscription has been activated!\nReference: ${paymentResult['lencoReference']}',
+                                        type: 'success',
+                                      );
+                                    }
+                                  }
+                                } else {
+                                  // Payment failed
+                                  _showResultNotification(
+                                    title: 'Payment Failed',
+                                    message:
+                                        paymentResult?['error'] ??
+                                        'Unable to process payment. Please try again.',
+                                    type: 'error',
+                                  );
+                                }
+                              } catch (e) {
+                                _showResultNotification(
+                                  title: 'Payment Error',
+                                  message:
+                                      'An error occurred while processing your payment:\n$e',
+                                  type: 'error',
+                                );
+                              } finally {
+                                isProcessing.value = false;
+                              }
+                            },
+                      icon: isProcessing.value
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(Iconsax.tick_circle, size: 18),
+                      label: Text(
+                        isProcessing.value
+                            ? 'Processing...'
+                            : 'Pay K${plan.price.toStringAsFixed(2)}',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.info_circle, color: Colors.blue, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'You will receive a prompt on your phone to complete the payment.',
+                        style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

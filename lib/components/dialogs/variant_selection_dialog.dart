@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../models/product_model.dart';
+import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 
@@ -24,7 +25,11 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
+
     return Dialog(
+      backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 500,
@@ -48,10 +53,13 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                             fit: BoxFit.cover,
                           )
                         : null,
-                    color: Colors.grey[200],
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
                   ),
                   child: widget.product.imageUrl.isEmpty
-                      ? Icon(Iconsax.box, color: Colors.grey)
+                      ? Icon(
+                          Iconsax.box,
+                          color: AppColors.getTextSecondary(isDark),
+                        )
                       : null,
                 ),
                 SizedBox(width: 16),
@@ -64,6 +72,7 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(isDark),
                         ),
                       ),
                       SizedBox(height: 4),
@@ -72,7 +81,7 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                           'Base Price: ${CurrencyFormatter.format(widget.product.price)}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: AppColors.getTextSecondary(isDark),
                           ),
                         ),
                       ),
@@ -80,7 +89,10 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close),
+                  icon: Icon(
+                    Icons.close,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                   onPressed: () => Get.back(),
                 ),
               ],
@@ -88,7 +100,11 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
             SizedBox(height: 24),
             Text(
               'Select Variant',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.getTextPrimary(isDark),
+              ),
             ),
             SizedBox(height: 16),
             // Variants List
@@ -104,14 +120,17 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                       widget.product.price + variant.priceAdjustment;
 
                   return Card(
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                     margin: EdgeInsets.only(bottom: 12),
                     elevation: isSelected ? 4 : 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(
                         color: isSelected
-                            ? AppColors.primary
-                            : Colors.grey.shade300,
+                            ? (isDark
+                                  ? AppColors.darkPrimary
+                                  : AppColors.primary)
+                            : AppColors.getDivider(isDark),
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -142,7 +161,9 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                         fit: BoxFit.cover,
                                       )
                                     : null,
-                                color: Colors.grey[200],
+                                color: isDark
+                                    ? Colors.grey[800]
+                                    : Colors.grey[200],
                               ),
                               child:
                                   variant.imageUrl == null ||
@@ -150,7 +171,7 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                   ? Icon(
                                       Iconsax.box,
                                       size: 24,
-                                      color: Colors.grey,
+                                      color: AppColors.getTextSecondary(isDark),
                                     )
                                   : null,
                             ),
@@ -167,6 +188,9 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
+                                          color: AppColors.getTextPrimary(
+                                            isDark,
+                                          ),
                                         ),
                                       ),
                                       SizedBox(width: 8),
@@ -176,9 +200,13 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.primary.withValues(
-                                            alpha: 0.1,
-                                          ),
+                                          color:
+                                              (isDark
+                                                      ? AppColors.darkPrimary
+                                                      : AppColors.primary)
+                                                  .withValues(
+                                                    alpha: isDark ? 0.2 : 0.1,
+                                                  ),
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
@@ -187,7 +215,9 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                           variant.attributeType,
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: AppColors.primary,
+                                            color: isDark
+                                                ? AppColors.darkPrimary
+                                                : AppColors.primary,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -202,14 +232,18 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                           'SKU: ${variant.sku}',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey[600],
+                                            color: AppColors.getTextSecondary(
+                                              isDark,
+                                            ),
                                           ),
                                         ),
                                       if (variant.sku != null)
                                         Text(
                                           ' • ',
                                           style: TextStyle(
-                                            color: Colors.grey[600],
+                                            color: AppColors.getTextSecondary(
+                                              isDark,
+                                            ),
                                           ),
                                         ),
                                       Text(
@@ -218,7 +252,9 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                           fontSize: 12,
                                           color: isOutOfStock
                                               ? Colors.red
-                                              : Colors.grey[600],
+                                              : AppColors.getTextSecondary(
+                                                  isDark,
+                                                ),
                                           fontWeight: isOutOfStock
                                               ? FontWeight.w600
                                               : FontWeight.normal,
@@ -240,8 +276,10 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: isOutOfStock
-                                          ? Colors.grey
-                                          : AppColors.primary,
+                                          ? AppColors.getTextSecondary(isDark)
+                                          : (isDark
+                                                ? AppColors.darkPrimary
+                                                : AppColors.primary),
                                     ),
                                   ),
                                 ),
@@ -268,12 +306,16 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
-                                      ? AppColors.primary
-                                      : Colors.grey.shade400,
+                                      ? (isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary)
+                                      : AppColors.getDivider(isDark),
                                   width: 2,
                                 ),
                                 color: isSelected
-                                    ? AppColors.primary
+                                    ? (isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.primary)
                                     : Colors.transparent,
                               ),
                               child: isSelected
@@ -301,6 +343,8 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                     onPressed: () => Get.back(),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: AppColors.getDivider(isDark)),
+                      foregroundColor: AppColors.getTextSecondary(isDark),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -320,7 +364,9 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                           },
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

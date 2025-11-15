@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pos_software/page_anchor.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:pos_software/services/data_sync_service.dart';
+import 'package:pos_software/services/subscription_service.dart';
 import 'dart:io' show Platform;
 
 import 'controllers/navigations_controller.dart';
@@ -35,6 +37,8 @@ void main() async {
   Get.put(ImageStorageService());
   Get.put(PriceTagDesignerController());
   Get.put(PrinterController());
+  Get.put(DataSyncService());
+  Get.put(SubscriptionService());
 
   // Only initialize PrinterService on mobile platforms (print_bluetooth_thermal only supports Android/iOS)
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {

@@ -11,6 +11,8 @@ import '../../services/printer_bluetooth_helper.dart';
 import '../../models/cashier_model.dart';
 import 'business_settings_view.dart';
 import 'appearance_settings_view.dart';
+import 'sync_settings_view.dart';
+import 'subscription_view.dart';
 
 class EnhancedSettingsView extends StatefulWidget {
   const EnhancedSettingsView({super.key});
@@ -26,7 +28,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -55,6 +57,8 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                   _buildSystemSettings(authController, isDark),
                   BusinessSettingsView(),
                   AppearanceSettingsView(),
+                  SubscriptionView(),
+                  SyncSettingsView(),
                 ],
               ),
             ),
@@ -106,6 +110,8 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
               Tab(icon: Icon(Iconsax.setting_2), text: 'System'),
               Tab(icon: Icon(Iconsax.shop), text: 'Business'),
               Tab(icon: Icon(Iconsax.brush_2), text: 'Appearance'),
+              Tab(icon: Icon(Iconsax.crown_1), text: 'Subscription'),
+              Tab(icon: Icon(Iconsax.cloud), text: 'Sync'),
             ],
           ),
         ],
@@ -290,7 +296,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
         Obx(() {
           final hasPrinter =
               businessController.receiptPrinterName.value.isNotEmpty;
- 
+
           return Column(
             children: [
               Container(

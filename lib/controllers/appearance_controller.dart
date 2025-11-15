@@ -59,14 +59,14 @@ class AppearanceController extends GetxController {
     await _storage.write('show_animations', showAnimations.value);
     await _storage.write('grid_columns', gridColumns.value);
 
-    Get.snackbar(
+    /*Get.snackbar(
       'Success',
       'Appearance settings applied immediately',
       snackPosition: SnackPosition.BOTTOM,
       duration: Duration(seconds: 2),
       backgroundColor: Color(primaryColor.value),
       colorText: Colors.white,
-    );
+    );*/
   }
 
   void setThemeMode(String mode) {

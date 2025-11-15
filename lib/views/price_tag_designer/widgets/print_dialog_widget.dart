@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import '../../../services/printer_service.dart';
+import '../../../controllers/appearance_controller.dart';
 import '../../../models/price_tag_template_model.dart';
 import '../../../models/product_model.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/colors.dart';
 
 class PrintDialogWidget extends StatefulWidget {
   final PriceTagTemplate template;
@@ -46,6 +48,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
+
     // Limit dialog height to viewport to avoid vertical overflow
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -55,6 +60,7 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
       child: Container(
         width: 600,
         padding: EdgeInsets.all(24),
+        color: AppColors.getSurfaceColor(isDark),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -62,15 +68,26 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
             // Header
             Row(
               children: [
-                Icon(Iconsax.printer, color: Colors.blue, size: 28),
+                Icon(
+                  Iconsax.printer,
+                  color: isDark ? AppColors.darkPrimary : Colors.blue,
+                  size: 28,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Print Price Tags',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
                 Spacer(),
                 IconButton(
-                  icon: Icon(Iconsax.close_circle),
+                  icon: Icon(
+                    Iconsax.close_circle,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                   onPressed: () => Get.back(),
                 ),
               ],
@@ -78,19 +95,19 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
             SizedBox(height: 8),
             Text(
               'Template: ${widget.template.name} (${widget.template.width.toStringAsFixed(0)}×${widget.template.height.toStringAsFixed(0)}mm)',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: AppColors.getTextSecondary(isDark)),
             ),
             SizedBox(height: 20),
-            Divider(),
+            Divider(color: AppColors.getDivider(isDark)),
             SizedBox(height: 20),
 
             // Printer Selection
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(color: AppColors.getDivider(isDark)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,14 +115,18 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                 children: [
                   Row(
                     children: [
-                      Icon(Iconsax.printer, size: 20, color: Colors.grey[700]),
+                      Icon(
+                        Iconsax.printer,
+                        size: 20,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Select Printer',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
-                          color: Colors.grey[800],
+                          color: AppColors.getTextPrimary(isDark),
                         ),
                       ),
                     ],
@@ -119,15 +140,23 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                       return Container(
                         padding: EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.orange[50],
+                          color: isDark
+                              ? Colors.orange.withOpacity(0.15)
+                              : Colors.orange[50],
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange[200]!),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.orange.withOpacity(0.3)
+                                : Colors.orange[200]!,
+                          ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Iconsax.warning_2,
-                              color: Colors.orange[700],
+                              color: isDark
+                                  ? Colors.orange
+                                  : Colors.orange[700],
                               size: 24,
                             ),
                             SizedBox(width: 12),
@@ -138,7 +167,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                                   Text(
                                     'No Printer Connected',
                                     style: TextStyle(
-                                      color: Colors.orange[900],
+                                      color: isDark
+                                          ? Colors.orange
+                                          : Colors.orange[900],
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -147,7 +178,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                                   Text(
                                     'Please connect a printer in System Settings first.',
                                     style: TextStyle(
-                                      color: Colors.orange[800],
+                                      color: isDark
+                                          ? Colors.orange[300]
+                                          : Colors.orange[800],
                                       fontSize: 12,
                                     ),
                                   ),
@@ -163,21 +196,30 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                     return Container(
                       padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.green[50],
+                        color: isDark
+                            ? Colors.green.withOpacity(0.15)
+                            : Colors.green[50],
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green[300]!, width: 2),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.green.withOpacity(0.3)
+                              : Colors.green[300]!,
+                          width: 2,
+                        ),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.green[100],
+                              color: isDark
+                                  ? Colors.green.withOpacity(0.2)
+                                  : Colors.green[100],
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Icon(
                               Iconsax.printer,
-                              color: Colors.green[700],
+                              color: isDark ? Colors.green : Colors.green[700],
                               size: 24,
                             ),
                           ),
@@ -191,7 +233,7 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.grey[800],
+                                    color: AppColors.getTextPrimary(isDark),
                                   ),
                                 ),
                                 SizedBox(height: 4),
@@ -203,7 +245,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.green[600],
+                                        color: isDark
+                                            ? Colors.green
+                                            : Colors.green[600],
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
@@ -220,7 +264,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                                       connected.macAdress,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey[600],
+                                        color: AppColors.getTextSecondary(
+                                          isDark,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -241,23 +287,27 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[50],
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(color: AppColors.getDivider(isDark)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Iconsax.copy, size: 20, color: Colors.grey[700]),
+                      Icon(
+                        Iconsax.copy,
+                        size: 20,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Number of Copies',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
-                          color: Colors.grey[800],
+                          color: AppColors.getTextPrimary(isDark),
                         ),
                       ),
                     ],
@@ -268,14 +318,14 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                       IconButton(
                         onPressed: numberOfCopies > 1
                             ? () {
-                          setState(() {
-                            numberOfCopies--;
-                          });
-                        }
+                                setState(() {
+                                  numberOfCopies--;
+                                });
+                              }
                             : null,
                         icon: Icon(Iconsax.minus),
                         iconSize: 32,
-                        color: Colors.blue,
+                        color: isDark ? AppColors.darkPrimary : Colors.blue,
                       ),
                       SizedBox(width: 16),
                       Container(
@@ -284,15 +334,18 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark ? AppColors.darkSurface : Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
+                          border: Border.all(
+                            color: AppColors.getDivider(isDark),
+                          ),
                         ),
                         child: Text(
                           '$numberOfCopies',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
+                            color: AppColors.getTextPrimary(isDark),
                           ),
                         ),
                       ),
@@ -305,7 +358,7 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                         },
                         icon: Icon(Iconsax.add_circle),
                         iconSize: 32,
-                        color: Colors.blue,
+                        color: isDark ? AppColors.darkPrimary : Colors.blue,
                       ),
                     ],
                   ),
@@ -321,16 +374,25 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: isDark
+                        ? AppColors.darkSurfaceVariant
+                        : Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Iconsax.document_text, size: 20),
+                      Icon(
+                        Iconsax.document_text,
+                        size: 20,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Total: $numberOfCopies label(s)',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
                       ),
                     ],
                   ),
@@ -342,9 +404,20 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                     onPressed: () => _testPrint(),
                     icon: Icon(Iconsax.document_text_1, size: 18),
                     label: Text('Test Print'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : Colors.blue,
+                    ),
                   ),
                 SizedBox(width: 8),
-                TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text('Cancel'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.getTextSecondary(isDark),
+                  ),
+                ),
                 SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: selectedPrinter == null
@@ -353,7 +426,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
                   icon: Icon(Iconsax.printer),
                   label: Text('Print Labels'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: isDark
+                        ? AppColors.darkPrimary
+                        : Colors.blue,
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   ),
@@ -370,20 +445,30 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
   Future<void> _testPrint() async {
     if (selectedPrinter == null) return;
 
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
+
     Get.dialog(
       PopScope(
         canPop: false,
         child: Dialog(
+          backgroundColor: AppColors.getSurfaceColor(isDark),
           child: Container(
             padding: EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
+                CircularProgressIndicator(
+                  color: isDark ? AppColors.darkPrimary : Colors.blue,
+                ),
                 SizedBox(height: 16),
                 Text(
                   'Sending test print...',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
               ],
             ),
@@ -485,6 +570,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
   }
 
   void _printTags() async {
+    final appearanceController = Get.find<AppearanceController>();
+    final isDark = appearanceController.isDarkMode.value;
+
     // Check if printer is selected
     if (selectedPrinter == null) {
       Get.snackbar(
@@ -503,19 +591,29 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
       PopScope(
         canPop: false,
         child: Dialog(
+          backgroundColor: AppColors.getSurfaceColor(isDark),
           child: Container(
             padding: EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
+                CircularProgressIndicator(
+                  color: isDark ? AppColors.darkPrimary : Colors.blue,
+                ),
                 SizedBox(height: 16),
                 Text(
                   'Printing $numberOfCopies label(s)...',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
                 SizedBox(height: 8),
-                Text('Please wait', style: TextStyle(color: Colors.grey[600])),
+                Text(
+                  'Please wait',
+                  style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+                ),
               ],
             ),
           ),
@@ -668,9 +766,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
 
   // Generate TSPL commands for a single element
   List<int> _generateTSPLElement(
-      PriceTagElement element,
-      ProductModel? product, // Made nullable
-      ) {
+    PriceTagElement element,
+    ProductModel? product, // Made nullable
+  ) {
     List<int> bytes = [];
 
     // Convert mm to dots with EXACT precision
@@ -700,7 +798,7 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
         break;
 
       case ElementType.productName:
-      // Render element.text (the placeholder/design text) when printing template
+        // Render element.text (the placeholder/design text) when printing template
         if (element.text != null && element.text!.isNotEmpty) {
           bytes.addAll(_generateTSPLText(x, y, element, element.text!));
         } else if (product != null) {
@@ -710,7 +808,7 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
         break;
 
       case ElementType.price:
-      // Render element.text (the placeholder/design text) when printing template
+        // Render element.text (the placeholder/design text) when printing template
         if (element.text != null && element.text!.isNotEmpty) {
           bytes.addAll(_generateTSPLText(x, y, element, element.text!));
         } else if (product != null) {
@@ -739,7 +837,7 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
         break;
 
       case ElementType.line:
-      // Determine if horizontal or vertical based on dimensions
+        // Determine if horizontal or vertical based on dimensions
         if (element.width >= element.height) {
           // Horizontal line
           int lineThickness = height.round();
@@ -747,7 +845,9 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
           int lineY = (y + height / 2).round() - (lineThickness ~/ 2);
           int lineX = x.round();
           int lineWidth = width.round();
-          bytes.addAll('BAR $lineX,$lineY,$lineWidth,$lineThickness\r\n'.codeUnits);
+          bytes.addAll(
+            'BAR $lineX,$lineY,$lineWidth,$lineThickness\r\n'.codeUnits,
+          );
         } else {
           // Vertical line
           int lineThickness = width.round();
@@ -755,12 +855,14 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
           int lineX = (x + width / 2).round() - (lineThickness ~/ 2);
           int lineY = y.round();
           int lineHeight = height.round();
-          bytes.addAll('BAR $lineX,$lineY,$lineThickness,$lineHeight\r\n'.codeUnits);
+          bytes.addAll(
+            'BAR $lineX,$lineY,$lineThickness,$lineHeight\r\n'.codeUnits,
+          );
         }
         break;
 
       case ElementType.rectangle:
-      // Draw rectangle/box
+        // Draw rectangle/box
         if (element.borderWidth > 0) {
           int borderWidth = (element.borderWidth * 8.0).round();
           if (borderWidth < 1) borderWidth = 1;
@@ -783,11 +885,11 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
 
   // Generate TSPL text command with exact canvas font size and positioning
   List<int> _generateTSPLText(
-      double x,
-      double y,
-      PriceTagElement element,
-      String text,
-      ) {
+    double x,
+    double y,
+    PriceTagElement element,
+    String text,
+  ) {
     List<int> bytes = [];
 
     // PRECISE font size calculation matching canvas rendering
@@ -798,8 +900,8 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
     double desiredHeightDots = element.fontSize * 8.0 / 3.7795275591;
 
     // Use font "4" (24x32 base), as it's mid-range
-    double baseFontHeight = 32.0;  // For font "4"
-    double baseCharWidth = 24.0;   // For font "4"
+    double baseFontHeight = 32.0; // For font "4"
+    double baseCharWidth = 24.0; // For font "4"
 
     // Calculate scale for height
     double scaleValue = desiredHeightDots / baseFontHeight;
@@ -853,11 +955,11 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
 
   // Generate TSPL barcode command with EXACT canvas dimensions
   List<int> _generateTSPLBarcode(
-      double x,
-      double y,
-      PriceTagElement element,
-      String data,
-      ) {
+    double x,
+    double y,
+    PriceTagElement element,
+    String data,
+  ) {
     List<int> bytes = [];
 
     // Clean and validate barcode data
@@ -924,11 +1026,11 @@ class _PrintDialogWidgetState extends State<PrintDialogWidget> {
 
   // Generate TSPL QR code command with EXACT canvas dimensions
   List<int> _generateTSPLQRCode(
-      double x,
-      double y,
-      PriceTagElement element,
-      String data,
-      ) {
+    double x,
+    double y,
+    PriceTagElement element,
+    String data,
+  ) {
     List<int> bytes = [];
 
     // Calculate QR code cell/module size from EXACT element width
