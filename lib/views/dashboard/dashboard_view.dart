@@ -8,6 +8,8 @@ import '../../controllers/dashboard_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
+import '../../utils/responsive.dart';
+import '../../utils/ui_constants.dart';
 
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
@@ -55,32 +57,59 @@ class DashboardView extends StatelessWidget {
                     elevation: 0,
                     backgroundColor: Colors.transparent,
                     flexibleSpace: FlexibleSpaceBar(
-                      background: _buildGlassmorphicHeader(controller, isDark),
+                      background: _buildGlassmorphicHeader(
+                        context,
+                        controller,
+                        isDark,
+                      ),
                     ),
                   ),
                   // Content
                   SliverPadding(
-                    padding: const EdgeInsets.all(24),
+                    padding: context.screenPadding,
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        _buildStatsCards(controller, isDark),
-                        const SizedBox(height: 32),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: _buildSalesChart(controller, isDark),
-                            ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: _buildTopProducts(controller, isDark),
-                            ),
-                          ],
+                        _buildStatsCards(context, controller, isDark),
+                        UIConstants.responsiveSectionSpace(context),
+                        // Responsive layout for charts
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (context.isMobile) {
+                              // Mobile: Stack vertically
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildSalesChart(controller, isDark),
+                                  UIConstants.responsiveSectionSpace(context),
+                                  _buildTopProducts(controller, isDark),
+                                ],
+                              );
+                            } else {
+                              // Desktop/Tablet: Side by side
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: _buildSalesChart(controller, isDark),
+                                  ),
+                                  UIConstants.horizontalSpace(
+                                    context.itemSpacing,
+                                  ),
+                                  Expanded(
+                                    child: _buildTopProducts(
+                                      controller,
+                                      isDark,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
                         ),
-                        const SizedBox(height: 32),
-                        _buildRecentTransactions(controller, isDark),
-                        const SizedBox(height: 24),
+                        UIConstants.responsiveSectionSpace(context),
+                        _buildRecentTransactions(context, controller, isDark),
+                        UIConstants.responsiveSectionSpace(context),
                       ]),
                     ),
                   ),
@@ -93,7 +122,11 @@ class DashboardView extends StatelessWidget {
     });
   }
 
-  Widget _buildGlassmorphicHeader(DashboardController controller, bool isDark) {
+  Widget _buildGlassmorphicHeader(
+    BuildContext context,
+    DashboardController controller,
+    bool isDark,
+  ) {
     final appearanceController = Get.find<AppearanceController>();
 
     return Container(
@@ -140,29 +173,33 @@ class DashboardView extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Iconsax.chart_215,
                             color: Colors.white,
-                            size: 28,
+                            size: context.isMobile ? 24 : 28,
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Dashboard',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
+                          SizedBox(width: context.isMobile ? 8 : 10),
+                          Flexible(
+                            child: Text(
+                              'Dashboard',
+                              style: TextStyle(
+                                fontSize: context.isMobile ? 22 : 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      UIConstants.verticalSpace(UIConstants.spacing8),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: context.isMobile ? 8 : 12,
+                          vertical: context.isMobile ? 4 : 6,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
@@ -177,17 +214,23 @@ class DashboardView extends StatelessWidget {
                             Icon(
                               Iconsax.calendar,
                               color: Colors.white,
-                              size: 14,
+                              size: context.isMobile ? 12 : 14,
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              DateFormat(
-                                'EEEE, MMMM d, y',
-                              ).format(DateTime.now()),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.95),
-                                fontWeight: FontWeight.w500,
+                            SizedBox(width: context.isMobile ? 4 : 6),
+                            Flexible(
+                              child: Text(
+                                DateFormat(
+                                  context.isMobile
+                                      ? 'MMM d, y'
+                                      : 'EEEE, MMMM d, y',
+                                ).format(DateTime.now()),
+                                style: TextStyle(
+                                  fontSize: context.isMobile ? 12 : 14,
+                                  color: Colors.white.withOpacity(0.95),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -316,17 +359,44 @@ class DashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsCards(DashboardController controller, bool isDark) {
+  Widget _buildStatsCards(
+    BuildContext context,
+    DashboardController controller,
+    bool isDark,
+  ) {
+    // Responsive grid configuration
+    final crossAxisCount = Responsive.value<int>(
+      context,
+      mobile: 2, // 2 columns on mobile
+      tablet: 2, // 2 columns on tablet
+      desktop: 4, // 4 columns on desktop
+    );
+
+    final childAspectRatio = Responsive.value<double>(
+      context,
+      mobile: 1.2,
+      tablet: 1.4,
+      desktop: 1.5,
+    );
+
+    final spacing = Responsive.spacing(
+      context,
+      mobile: 12.0,
+      tablet: 16.0,
+      desktop: 20.0,
+    );
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
-      crossAxisSpacing: 20,
-      mainAxisSpacing: 20,
-      childAspectRatio: 1.5,
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: spacing,
+      mainAxisSpacing: spacing,
+      childAspectRatio: childAspectRatio,
       children: [
         Obx(
           () => _buildStatCard(
+            context,
             'Today\'s Sales',
             CurrencyFormatter.format(controller.todaySales.value),
             Iconsax.dollar_circle,
@@ -340,6 +410,7 @@ class DashboardView extends StatelessWidget {
         ),
         Obx(
           () => _buildStatCard(
+            context,
             'Month Sales',
             CurrencyFormatter.format(controller.monthSales.value),
             Iconsax.chart_21,
@@ -353,6 +424,7 @@ class DashboardView extends StatelessWidget {
         ),
         Obx(
           () => _buildStatCard(
+            context,
             'Total Customers',
             '${controller.totalCustomers.value}',
             Iconsax.profile_2user,
@@ -366,6 +438,7 @@ class DashboardView extends StatelessWidget {
         ),
         Obx(
           () => _buildStatCard(
+            context,
             'Total Products',
             '${controller.totalProducts.value}',
             Iconsax.box,
@@ -384,6 +457,7 @@ class DashboardView extends StatelessWidget {
   }
 
   Widget _buildStatCard(
+    BuildContext context,
     String title,
     String value,
     IconData icon,
@@ -458,28 +532,33 @@ class DashboardView extends StatelessWidget {
               ),
               // Content
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(context.isMobile ? 14 : 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
+                          flex: 2,
                           child: Text(
                             title,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: context.isMobile ? 11 : 14,
                               color: AppColors.getTextSecondary(isDark),
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.3,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        SizedBox(width: UIConstants.spacing8),
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: EdgeInsets.all(context.isMobile ? 6 : 12),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
@@ -495,28 +574,39 @@ class DashboardView extends StatelessWidget {
                               width: 1,
                             ),
                           ),
-                          child: Icon(icon, color: color, size: 24),
+                          child: Icon(
+                            icon,
+                            color: color,
+                            size: context.isMobile ? 18 : 24,
+                          ),
                         ),
                       ],
                     ),
-                    const Spacer(),
+                    UIConstants.verticalSpace(
+                      context.isMobile
+                          ? UIConstants.spacing8
+                          : UIConstants.spacing12,
+                    ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           value,
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: context.isMobile ? 18 : 28,
                             fontWeight: FontWeight.bold,
                             color: AppColors.getTextPrimary(isDark),
                             letterSpacing: -0.5,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        UIConstants.verticalSpace(UIConstants.spacing4),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.isMobile ? 6 : 10,
+                            vertical: context.isMobile ? 2 : 5,
                           ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -534,7 +624,7 @@ class DashboardView extends StatelessWidget {
                           child: Text(
                             subtitle,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: context.isMobile ? 10 : 11,
                               color: color,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1027,7 +1117,11 @@ class DashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentTransactions(DashboardController controller, bool isDark) {
+  Widget _buildRecentTransactions(
+    BuildContext context,
+    DashboardController controller,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
@@ -1054,56 +1148,70 @@ class DashboardView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          (isDark ? AppColors.darkPrimary : AppColors.primary)
-                              .withOpacity(isDark ? 0.25 : 0.2),
-                          (isDark ? AppColors.darkPrimary : AppColors.primary)
-                              .withOpacity(isDark ? 0.15 : 0.1),
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(context.isMobile ? 8 : 10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withOpacity(isDark ? 0.25 : 0.2),
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withOpacity(isDark ? 0.15 : 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color:
+                              (isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary)
+                                  .withOpacity(0.3),
+                        ),
+                      ),
+                      child: Icon(
+                        Iconsax.receipt_text,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                        size: context.isMobile ? 16 : 20,
+                      ),
+                    ),
+                    SizedBox(width: context.isMobile ? 8 : 12),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Recent Transactions',
+                            style: TextStyle(
+                              fontSize: context.isMobile ? 16 : 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.getTextPrimary(isDark),
+                              letterSpacing: -0.3,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          Text(
+                            'Latest activity',
+                            style: TextStyle(
+                              fontSize: context.isMobile ? 11 : 12,
+                              color: AppColors.getTextSecondary(isDark),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color:
-                            (isDark ? AppColors.darkPrimary : AppColors.primary)
-                                .withOpacity(0.3),
-                      ),
                     ),
-                    child: Icon(
-                      Iconsax.receipt_text,
-                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Recent Transactions',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.getTextPrimary(isDark),
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      Text(
-                        'Latest activity',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.getTextSecondary(isDark),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
               TextButton.icon(
                 onPressed: () {

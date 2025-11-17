@@ -23,6 +23,7 @@ class DatabaseService extends GetxController {
   static const String settingsTable = 'settings';
   static const String priceTagTemplatesTable = 'price_tag_templates';
   static const String printersTable = 'printers';
+  static const String cashiersTable = 'cashiers';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -186,6 +187,21 @@ class DatabaseService extends GetxController {
       )
     ''');
 
+    // Cashiers table
+    await db.execute('''
+      CREATE TABLE $cashiersTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        pin TEXT NOT NULL,
+        role TEXT NOT NULL,
+        profileImageUrl TEXT,
+        isActive INTEGER DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        lastLogin TEXT
+      )
+    ''');
+
     // Create indexes for better performance
     await db.execute(
       'CREATE INDEX idx_products_category ON $productsTable(category)',
@@ -208,6 +224,10 @@ class DatabaseService extends GetxController {
     );
     await db.execute(
       'CREATE INDEX idx_customers_email ON $customersTable(email)',
+    );
+    await db.execute('CREATE INDEX idx_cashiers_pin ON $cashiersTable(pin)');
+    await db.execute(
+      'CREATE INDEX idx_cashiers_email ON $cashiersTable(email)',
     );
   }
 
@@ -243,6 +263,29 @@ class DatabaseService extends GetxController {
           updatedAt TEXT
         )
       ''');
+
+      // Add cashiers table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $cashiersTable (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          pin TEXT NOT NULL,
+          role TEXT NOT NULL,
+          profileImageUrl TEXT,
+          isActive INTEGER DEFAULT 1,
+          createdAt TEXT NOT NULL,
+          lastLogin TEXT
+        )
+      ''');
+
+      // Add indexes for cashiers
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_cashiers_pin ON $cashiersTable(pin)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_cashiers_email ON $cashiersTable(email)',
+      );
     }
   }
 
@@ -979,6 +1022,77 @@ class DatabaseService extends GetxController {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // ==================== CASHIERS ====================
+
+  Future<int> insertCashier(Map<String, dynamic> cashier) async {
+    final db = await database;
+    try {
+      await db.insert(
+        cashiersTable,
+        cashier,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return 1;
+    } catch (e) {
+      print('Error inserting cashier: $e');
+      return 0;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllCashiers() async {
+    final db = await database;
+    return await db.query(cashiersTable, orderBy: 'createdAt DESC');
+  }
+
+  Future<Map<String, dynamic>?> getCashierById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      cashiersTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<Map<String, dynamic>?> getCashierByPin(String pin) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      cashiersTable,
+      where: 'pin = ? AND isActive = ?',
+      whereArgs: [pin, 1],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<int> updateCashier(String id, Map<String, dynamic> cashier) async {
+    final db = await database;
+    return await db.update(
+      cashiersTable,
+      cashier,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> updateCashierLastLogin(String id, DateTime lastLogin) async {
+    final db = await database;
+    return await db.update(
+      cashiersTable,
+      {'lastLogin': lastLogin.toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteCashier(String id) async {
+    final db = await database;
+    return await db.delete(cashiersTable, where: 'id = ?', whereArgs: [id]);
   }
 
   // Close database

@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../controllers/business_settings_controller.dart';
 import '../../controllers/appearance_controller.dart';
+import '../../controllers/wallet_controller.dart';
 import '../../utils/colors.dart';
+import '../../utils/responsive.dart';
 
 class BusinessSettingsView extends StatelessWidget {
   const BusinessSettingsView({super.key});
@@ -20,7 +22,7 @@ class BusinessSettingsView extends StatelessWidget {
         backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
         body: Column(
           children: [
-            _buildHeader(controller, isDark),
+            _buildHeader(context, controller, isDark),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
@@ -48,9 +50,13 @@ class BusinessSettingsView extends StatelessWidget {
     });
   }
 
-  Widget _buildHeader(BusinessSettingsController controller, bool isDark) {
+  Widget _buildHeader(
+    BuildContext context,
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceColor(isDark),
         boxShadow: [
@@ -61,96 +67,172 @@ class BusinessSettingsView extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Business Settings',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.getTextPrimary(isDark),
+      child: context.isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Business Settings',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Configure your store information and preferences',
-                style: TextStyle(
-                  color: AppColors.getTextSecondary(isDark),
-                  fontSize: 14,
+                SizedBox(height: 4),
+                Text(
+                  'Store information',
+                  style: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  Get.dialog(
-                    AlertDialog(
-                      backgroundColor: AppColors.getSurfaceColor(isDark),
-                      title: Text(
-                        'Reset to Defaults',
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _showResetDialog(controller, isDark);
+                        },
+                        icon: Icon(
+                          Iconsax.refresh,
+                          size: 16,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        label: Text(
+                          'Reset',
+                          style: TextStyle(
+                            color: AppColors.getTextPrimary(isDark),
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.getDivider(isDark)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: controller.saveSettings,
+                        icon: Icon(Iconsax.tick_circle, size: 16),
+                        label: Text('Save', style: TextStyle(fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Business Settings',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Configure your store information and preferences',
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 16),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        _showResetDialog(controller, isDark);
+                      },
+                      icon: Icon(
+                        Iconsax.refresh,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                      label: Text(
+                        'Reset',
                         style: TextStyle(
                           color: AppColors.getTextPrimary(isDark),
                         ),
                       ),
-                      content: Text(
-                        'Are you sure you want to reset all settings to default values?',
-                        style: TextStyle(
-                          color: AppColors.getTextSecondary(isDark),
-                        ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.getDivider(isDark)),
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Get.back(),
-                          child: Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            controller.resetToDefaults();
-                            Get.back();
-                            Get.snackbar(
-                              'Reset',
-                              'Settings reset to defaults',
-                              backgroundColor: Colors.orange,
-                              colorText: Colors.white,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                          ),
-                          child: Text(
-                            'Reset',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
                     ),
-                  );
-                },
-                icon: Icon(Iconsax.refresh),
-                label: Text('Reset to Defaults'),
-              ),
-              SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () => controller.saveSettings(),
-                icon: Icon(Iconsax.save_2, color: Colors.white),
-                label: Text(
-                  'Save Changes',
-                  style: TextStyle(color: Colors.white),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: controller.saveSettings,
+                      icon: Icon(Iconsax.tick_circle),
+                      label: Text('Save Changes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark
-                      ? AppColors.darkPrimary
-                      : AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
-              ),
-            ],
+              ],
+            ),
+    );
+  }
+
+  void _showResetDialog(BusinessSettingsController controller, bool isDark) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
+        title: Text(
+          'Reset to Defaults',
+          style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+        ),
+        content: Text(
+          'Are you sure you want to reset all settings to default values?',
+          style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              controller.resetToDefaults();
+              Get.back();
+              Get.snackbar(
+                'Reset',
+                'Settings reset to defaults',
+                backgroundColor: Colors.orange,
+                colorText: Colors.white,
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: Text('Reset', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -454,6 +536,7 @@ class BusinessSettingsView extends StatelessWidget {
                   child: Obx(
                     () => DropdownButtonFormField<String>(
                       value: controller.currency.value,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Currency',
                         border: OutlineInputBorder(
@@ -544,6 +627,7 @@ class BusinessSettingsView extends StatelessWidget {
                   child: Obx(
                     () => DropdownButtonFormField<String>(
                       value: controller.currencyPosition.value,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Symbol Position',
                         border: OutlineInputBorder(
@@ -1057,9 +1141,25 @@ class BusinessSettingsView extends StatelessWidget {
             Obx(
               () => SwitchListTile(
                 value: controller.acceptMobile.value,
-                onChanged: (value) => controller.acceptMobile.value = value,
+                onChanged: (value) async {
+                  controller.acceptMobile.value = value;
+                  
+                  // Also enable/disable KalooMoney wallet
+                  try {
+                    final walletController = Get.find<WalletController>();
+                    if (value) {
+                      // Enable wallet when mobile payments are enabled
+                      await walletController.setupWallet();
+                    } else {
+                      // Disable wallet when mobile payments are disabled
+                      await walletController.disableWallet();
+                    }
+                  } catch (e) {
+                    print('WalletController not found: $e');
+                  }
+                },
                 title: Text('Accept Mobile Payments'),
-                subtitle: Text('Apple Pay, Google Pay, etc.'),
+                subtitle: Text('KalooMoney mobile money payments'),
                 secondary: Icon(Iconsax.mobile),
               ),
             ),

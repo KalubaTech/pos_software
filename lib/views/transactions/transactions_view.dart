@@ -8,6 +8,8 @@ import '../../controllers/business_settings_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
+import '../../utils/responsive.dart';
+import '../../utils/ui_constants.dart';
 import '../../components/dialogs/enhanced_checkout_dialog.dart';
 import '../../components/dialogs/variant_selection_dialog.dart';
 import '../../components/widgets/local_image_widget.dart';
@@ -28,30 +30,90 @@ class TransactionsView extends StatelessWidget {
 
       return Scaffold(
         backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[100],
-        body: Row(
-          children: [
-            // Products Section
-            Expanded(
-              flex: 2,
-              child: _buildProductsSection(
-                context,
-                productController,
-                cartController,
-                isDark,
-              ),
-            ),
-            // Cart Section
-            Container(
-              width: 400,
-              color: AppColors.getSurfaceColor(isDark),
-              child: _buildCartSection(
-                context,
-                cartController,
-                customerController,
-                isDark,
-              ),
-            ),
-          ],
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            if (context.isMobile) {
+              // Mobile: Tab view (Products / Cart)
+              return DefaultTabController(
+                length: 2,
+                child: Column(
+                  children: [
+                    Container(
+                      color: AppColors.getSurfaceColor(isDark),
+                      child: TabBar(
+                        labelColor: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                        unselectedLabelColor: AppColors.getTextSecondary(
+                          isDark,
+                        ),
+                        indicatorColor: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                        tabs: [
+                          Tab(icon: Icon(Iconsax.shop), text: 'Products'),
+                          Tab(
+                            icon: Icon(Iconsax.shopping_cart),
+                            text: 'Cart (${cartController.cartItems.length})',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildProductsSection(
+                            context,
+                            productController,
+                            cartController,
+                            isDark,
+                          ),
+                          _buildCartSection(
+                            context,
+                            cartController,
+                            customerController,
+                            isDark,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              // Desktop: Split view (Products | Cart)
+              return Row(
+                children: [
+                  // Products Section
+                  Expanded(
+                    flex: 2,
+                    child: _buildProductsSection(
+                      context,
+                      productController,
+                      cartController,
+                      isDark,
+                    ),
+                  ),
+                  // Cart Section
+                  Container(
+                    width: Responsive.value<double>(
+                      context,
+                      mobile: 300,
+                      tablet: 350,
+                      desktop: 400,
+                    ),
+                    color: AppColors.getSurfaceColor(isDark),
+                    child: _buildCartSection(
+                      context,
+                      cartController,
+                      customerController,
+                      isDark,
+                    ),
+                  ),
+                ],
+              );
+            }
+          },
         ),
       );
     });
@@ -290,10 +352,10 @@ class TransactionsView extends StatelessWidget {
         product.variants != null && product.variants!.isNotEmpty;
 
     return Card(
-      elevation: isDark ? 4 : 2,
+      elevation: UIConstants.cardElevation(Get.context!, isDark: isDark),
       color: AppColors.getSurfaceColor(isDark),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: UIConstants.borderRadiusLarge,
         side: BorderSide(color: AppColors.getDivider(isDark), width: 1),
       ),
       child: InkWell(
@@ -313,7 +375,7 @@ class TransactionsView extends StatelessWidget {
             cartController.addToCart(product);
           }
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: UIConstants.borderRadiusLarge,
         child: Stack(
           children: [
             Column(
@@ -322,7 +384,7 @@ class TransactionsView extends StatelessWidget {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12),
+                      top: Radius.circular(UIConstants.spacing12),
                     ),
                     child: LocalImageWidget(
                       imagePath: product.imageUrl,
@@ -331,7 +393,7 @@ class TransactionsView extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.all(12),
+                  padding: Get.context!.cardPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -339,26 +401,26 @@ class TransactionsView extends StatelessWidget {
                         product.name,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: Get.context!.fontSizeBody,
                           color: AppColors.getTextPrimary(isDark),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4),
+                      UIConstants.verticalSpace(UIConstants.spacing4),
                       Text(
                         product.category,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: Get.context!.fontSizeCaption,
                           color: AppColors.getTextSecondary(isDark),
                         ),
                       ),
-                      SizedBox(height: 8),
+                      UIConstants.verticalSpace(UIConstants.spacing8),
                       Obx(
                         () => Text(
                           CurrencyFormatter.format(product.price),
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: Get.context!.fontSizeTitle,
                             fontWeight: FontWeight.bold,
                             color: isDark
                                 ? AppColors.darkPrimary
@@ -626,43 +688,46 @@ class TransactionsView extends StatelessWidget {
 
   Widget _buildCartItem(item, CartController cartController, bool isDark) {
     return Card(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: Get.context!.itemSpacing),
       color: AppColors.getSurfaceColor(isDark),
-      elevation: isDark ? 2 : 1,
+      elevation: UIConstants.cardElevation(Get.context!, isDark: isDark),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: UIConstants.borderRadiusMedium,
         side: BorderSide(color: AppColors.getDivider(isDark), width: 1),
       ),
       child: Padding(
-        padding: EdgeInsets.all(12),
+        padding: Get.context!.cardPadding,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: UIConstants.borderRadiusMedium,
               child: LocalImageWidget(
                 // Use variant image if available, otherwise product image
                 imagePath:
                     item.selectedVariant?.imageUrl ?? item.product.imageUrl,
-                width: 60,
-                height: 60,
+                width: Get.context!.iconSizeXLarge,
+                height: Get.context!.iconSizeXLarge,
                 fit: BoxFit.cover,
               ),
             ),
-            SizedBox(width: 12),
+            UIConstants.horizontalSpace(UIConstants.spacing12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     item.displayName, // Shows product name with variant
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: Get.context!.fontSizeBody,
                       color: AppColors.getTextPrimary(isDark),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  UIConstants.verticalSpace(UIConstants.spacing4),
                   Obx(
                     () => Text(
                       CurrencyFormatter.format(
@@ -670,19 +735,22 @@ class TransactionsView extends StatelessWidget {
                       ), // Use unitPrice which includes variant
                       style: TextStyle(
                         color: AppColors.getTextSecondary(isDark),
-                        fontSize: 12,
+                        fontSize: Get.context!.fontSizeCaption,
                       ),
                     ),
                   ),
                   if (item.selectedVariant != null)
                     Container(
-                      margin: EdgeInsets.only(top: 4),
-                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      margin: EdgeInsets.only(top: UIConstants.spacing4),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: UIConstants.spacing8,
+                        vertical: UIConstants.spacing4,
+                      ),
                       decoration: BoxDecoration(
                         color:
                             (isDark ? AppColors.darkPrimary : AppColors.primary)
                                 .withValues(alpha: isDark ? 0.25 : 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: UIConstants.borderRadiusSmall,
                       ),
                       child: Text(
                         item.selectedVariant!.attributeType,
@@ -699,11 +767,12 @@ class TransactionsView extends StatelessWidget {
               ),
             ),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   icon: Icon(
                     Iconsax.minus_cirlce,
-                    size: 20,
+                    size: Get.context!.iconSizeMedium,
                     color: AppColors.getTextSecondary(isDark),
                   ),
                   onPressed: () => cartController.updateQuantity(

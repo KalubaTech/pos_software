@@ -5,6 +5,7 @@ import '../../controllers/sync_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../services/subscription_service.dart';
 import '../../utils/colors.dart';
+import '../../utils/responsive.dart';
 
 class SyncSettingsView extends StatelessWidget {
   const SyncSettingsView({super.key});
@@ -28,7 +29,7 @@ class SyncSettingsView extends StatelessWidget {
         backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
         body: Column(
           children: [
-            _buildHeader(controller, isDark),
+            _buildHeader(context, controller, isDark),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
@@ -52,9 +53,13 @@ class SyncSettingsView extends StatelessWidget {
     });
   }
 
-  Widget _buildHeader(SyncController controller, bool isDark) {
+  Widget _buildHeader(
+    BuildContext context,
+    SyncController controller,
+    bool isDark,
+  ) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.isMobile ? 16 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -72,54 +77,111 @@ class SyncSettingsView extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Iconsax.refresh, color: Colors.white, size: 32),
-                  SizedBox(width: 16),
-                  Text(
-                    'Data Sync',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+      child: context.isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Iconsax.refresh, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Data Sync',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Synchronize data with external database',
-                style: TextStyle(fontSize: 14, color: Colors.white70),
-              ),
-            ],
-          ),
-          Obx(() {
-            if (controller.isSyncing) {
-              return SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    Obx(() {
+                      if (controller.isSyncing) {
+                        return SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        );
+                      }
+                      return Icon(
+                        controller.isConfigured.value
+                            ? Iconsax.tick_circle5
+                            : Iconsax.warning_2,
+                        color: Colors.white,
+                        size: 24,
+                      );
+                    }),
+                  ],
                 ),
-              );
-            }
-            return Icon(
-              controller.isConfigured.value
-                  ? Iconsax.tick_circle5
-                  : Iconsax.warning_2,
-              color: Colors.white,
-              size: 32,
-            );
-          }),
-        ],
-      ),
+                SizedBox(height: 8),
+                Text(
+                  'Sync with external database',
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Iconsax.refresh, color: Colors.white, size: 32),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              'Data Sync',
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Synchronize data with external database',
+                        style: TextStyle(fontSize: 14, color: Colors.white70),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 16),
+                Obx(() {
+                  if (controller.isSyncing) {
+                    return SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    );
+                  }
+                  return Icon(
+                    controller.isConfigured.value
+                        ? Iconsax.tick_circle5
+                        : Iconsax.warning_2,
+                    color: Colors.white,
+                    size: 32,
+                  );
+                }),
+              ],
+            ),
     );
   }
 
@@ -772,154 +834,156 @@ class SyncSettingsView extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Iconsax.crown_1, size: 64, color: Colors.blue),
                 ),
-                child: Icon(Iconsax.crown_1, size: 64, color: Colors.blue),
-              ),
-              SizedBox(height: 24),
-              Text(
-                'Premium Feature',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.getTextPrimary(isDark),
+                SizedBox(height: 24),
+                Text(
+                  'Premium Feature',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Cloud synchronization is a premium feature',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.getTextSecondary(isDark),
+                SizedBox(height: 12),
+                Text(
+                  'Cloud synchronization is a premium feature',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
                 ),
-              ),
-              SizedBox(height: 32),
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
+                SizedBox(height: 32),
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildFeatureItem(
+                        'Multi-device sync',
+                        'Access your data from anywhere',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Real-time updates',
+                        'Automatic background synchronization',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Cloud backup',
+                        'Never lose your business data',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Team collaboration',
+                        'Share data across your team',
+                        isDark,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
+                SizedBox(height: 32),
+                Row(
                   children: [
-                    _buildFeatureItem(
-                      'Multi-device sync',
-                      'Access your data from anywhere',
-                      isDark,
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // Go back or close
+                          Get.back();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                          ),
+                          foregroundColor: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Maybe Later',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
-                    SizedBox(height: 16),
-                    _buildFeatureItem(
-                      'Real-time updates',
-                      'Automatic background synchronization',
-                      isDark,
-                    ),
-                    SizedBox(height: 16),
-                    _buildFeatureItem(
-                      'Cloud backup',
-                      'Never lose your business data',
-                      isDark,
-                    ),
-                    SizedBox(height: 16),
-                    _buildFeatureItem(
-                      'Team collaboration',
-                      'Share data across your team',
-                      isDark,
+                    SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // Navigate to subscription tab (index 3)
+                          final tabController =
+                              Get.context!
+                                      .findAncestorStateOfType<
+                                        State<StatefulWidget>
+                                      >()
+                                      ?.widget
+                                  as dynamic;
+                          if (tabController != null) {
+                            try {
+                              (tabController as dynamic)._tabController
+                                  ?.animateTo(3);
+                            } catch (e) {
+                              print('Could not switch tab: $e');
+                            }
+                          }
+                        },
+                        icon: Icon(Iconsax.crown_1, size: 20),
+                        label: Text(
+                          'View Plans',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        // Go back or close
-                        Get.back();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(
-                          color: isDark
-                              ? AppColors.darkPrimary
-                              : AppColors.primary,
-                        ),
-                        foregroundColor: isDark
-                            ? AppColors.darkPrimary
-                            : AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Maybe Later',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                SizedBox(height: 16),
+                Text(
+                  'All offline features remain completely free',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.getTextSecondary(isDark),
+                    fontStyle: FontStyle.italic,
                   ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Navigate to subscription tab (index 3)
-                        final tabController =
-                            Get.context!
-                                    .findAncestorStateOfType<
-                                      State<StatefulWidget>
-                                    >()
-                                    ?.widget
-                                as dynamic;
-                        if (tabController != null) {
-                          try {
-                            (tabController as dynamic)._tabController
-                                ?.animateTo(3);
-                          } catch (e) {
-                            print('Could not switch tab: $e');
-                          }
-                        }
-                      },
-                      icon: Icon(Iconsax.crown_1, size: 20),
-                      label: Text(
-                        'View Plans',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              Text(
-                'All offline features remain completely free',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.getTextSecondary(isDark),
-                  fontStyle: FontStyle.italic,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

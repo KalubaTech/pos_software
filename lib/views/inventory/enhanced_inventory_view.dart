@@ -7,6 +7,8 @@ import '../../controllers/appearance_controller.dart';
 import '../../models/product_model.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
+import '../../utils/responsive.dart';
+import '../../utils/ui_constants.dart';
 import '../../components/dialogs/add_product_dialog.dart';
 import '../../components/widgets/local_image_widget.dart';
 
@@ -25,7 +27,7 @@ class EnhancedInventoryView extends StatelessWidget {
         backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
         body: Column(
           children: [
-            _buildHeader(controller, isDark),
+            _buildHeader(context, controller, isDark),
             _buildQuickStats(controller, isDark),
             Expanded(
               child: Obx(() {
@@ -42,19 +44,36 @@ class EnhancedInventoryView extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showAddProductDialog(controller),
-          backgroundColor: isDark ? AppColors.darkPrimary : AppColors.primary,
-          icon: Icon(Iconsax.add, color: Colors.white),
-          label: Text('Add Product', style: TextStyle(color: Colors.white)),
-        ),
+        floatingActionButton: context.isMobile
+            ? FloatingActionButton(
+                onPressed: () => _showAddProductDialog(controller),
+                backgroundColor: isDark
+                    ? AppColors.darkPrimary
+                    : AppColors.primary,
+                child: Icon(Iconsax.add, color: Colors.white),
+              )
+            : FloatingActionButton.extended(
+                onPressed: () => _showAddProductDialog(controller),
+                backgroundColor: isDark
+                    ? AppColors.darkPrimary
+                    : AppColors.primary,
+                icon: Icon(Iconsax.add, color: Colors.white),
+                label: Text(
+                  'Add Product',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
       );
     });
   }
 
-  Widget _buildHeader(ProductController controller, bool isDark) {
+  Widget _buildHeader(
+    BuildContext context,
+    ProductController controller,
+    bool isDark,
+  ) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceColor(isDark),
         boxShadow: isDark
@@ -73,41 +92,55 @@ class EnhancedInventoryView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Inventory Management',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.getTextPrimary(isDark),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.isMobile ? 'Inventory' : 'Inventory Management',
+                      style: TextStyle(
+                        fontSize: context.isMobile ? 24 : 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Manage products, stock levels, and variants',
-                    style: TextStyle(
-                      color: AppColors.getTextSecondary(isDark),
-                      fontSize: 14,
+                    SizedBox(height: 4),
+                    Text(
+                      context.isMobile
+                          ? 'Manage products'
+                          : 'Manage products, stock levels, and variants',
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                        fontSize: context.isMobile ? 12 : 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              SizedBox(width: 12),
               Obx(
                 () => Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.isMobile ? 12 : 16,
+                    vertical: context.isMobile ? 6 : 8,
+                  ),
                   decoration: BoxDecoration(
                     color: (isDark ? AppColors.darkPrimary : AppColors.primary)
                         .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${controller.filteredProducts.length} Products',
+                    context.isMobile
+                        ? '${controller.filteredProducts.length}'
+                        : '${controller.filteredProducts.length} Products',
                     style: TextStyle(
                       color: isDark ? AppColors.darkPrimary : AppColors.primary,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: context.isMobile ? 14 : 16,
                     ),
                   ),
                 ),
@@ -115,197 +148,365 @@ class EnhancedInventoryView extends StatelessWidget {
             ],
           ),
           SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                  decoration: InputDecoration(
-                    hintText: 'Search by name, SKU, or barcode...',
-                    hintStyle: TextStyle(
-                      color: AppColors.getTextSecondary(isDark),
-                    ),
-                    prefixIcon: Icon(
-                      Iconsax.search_normal,
-                      color: AppColors.getTextSecondary(isDark),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColors.getDivider(isDark),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColors.getDivider(isDark),
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.darkSurfaceVariant
-                        : Colors.grey[50],
-                  ),
-                  onChanged: controller.searchProducts,
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Obx(
-                  () => DropdownButtonFormField<String>(
-                    value: controller.selectedCategory.value.isEmpty
-                        ? 'All'
-                        : controller.selectedCategory.value,
-                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                    dropdownColor: AppColors.getSurfaceColor(isDark),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
+          // Make search row responsive - stack on mobile
+          Responsive.isMobile(context)
+              ? Column(
+                  children: [
+                    TextField(
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      decoration: InputDecoration(
+                        hintText: 'Search products...',
+                        hintStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.search_normal,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
                         ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : Colors.grey[50],
-                      prefixIcon: Icon(
-                        Iconsax.category,
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
+                      onChanged: controller.searchProducts,
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'All',
-                        child: Text('All Categories'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Beverages',
-                        child: Text('Beverages'),
-                      ),
-                      DropdownMenuItem(value: 'Food', child: Text('Food')),
-                      DropdownMenuItem(
-                        value: 'Electronics',
-                        child: Text('Electronics'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Clothing',
-                        child: Text('Clothing'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Home & Garden',
-                        child: Text('Home & Garden'),
-                      ),
-                    ],
-                    onChanged: (value) =>
-                        controller.filterByCategory(value ?? ''),
-                  ),
-                ),
-              ),
-              SizedBox(width: 16),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.getDivider(isDark)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: PopupMenuButton<String>(
-                  icon: Icon(
-                    Iconsax.filter,
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  color: AppColors.getSurfaceColor(isDark),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'all',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Iconsax.box,
-                            size: 18,
+                    SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Obx(
+                            () => DropdownButtonFormField<String>(
+                              value: controller.selectedCategory.value.isEmpty
+                                  ? 'All'
+                                  : controller.selectedCategory.value,
+                              style: TextStyle(
+                                color: AppColors.getTextPrimary(isDark),
+                                fontSize: 14,
+                              ),
+                              dropdownColor: AppColors.getSurfaceColor(isDark),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: AppColors.getDivider(isDark),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: AppColors.getDivider(isDark),
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: isDark
+                                    ? AppColors.darkSurfaceVariant
+                                    : Colors.grey[50],
+                                prefixIcon: Icon(
+                                  Iconsax.category,
+                                  size: 18,
+                                  color: AppColors.getTextSecondary(isDark),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                              isExpanded: true,
+                              items: [
+                                DropdownMenuItem(
+                                  value: 'All',
+                                  child: Text(
+                                    'All',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Beverages',
+                                  child: Text(
+                                    'Beverages',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Food',
+                                  child: Text('Food'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Electronics',
+                                  child: Text(
+                                    'Electronics',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Clothing',
+                                  child: Text(
+                                    'Clothing',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Home & Garden',
+                                  child: Text(
+                                    'Home',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) =>
+                                  controller.filterByCategory(value ?? ''),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: PopupMenuButton<String>(
+                            icon: Icon(
+                              Iconsax.filter,
+                              size: 20,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            color: AppColors.getSurfaceColor(isDark),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            itemBuilder: (context) =>
+                                _buildFilterMenuItems(isDark),
+                            onSelected: (value) {
+                              // Filter products based on stock status
+                              // This would need to be implemented in the controller
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        style: TextStyle(
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search by name, SKU, or barcode...',
+                          hintStyle: TextStyle(
                             color: AppColors.getTextSecondary(isDark),
                           ),
-                          SizedBox(width: 12),
-                          Text(
-                            'All Products',
-                            style: TextStyle(
-                              color: AppColors.getTextPrimary(isDark),
+                          prefixIcon: Icon(
+                            Iconsax.search_normal,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.getDivider(isDark),
                             ),
                           ),
-                        ],
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.getDivider(isDark),
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.darkSurfaceVariant
+                              : Colors.grey[50],
+                        ),
+                        onChanged: controller.searchProducts,
                       ),
                     ),
-                    PopupMenuItem(
-                      value: 'low_stock',
-                      child: Row(
-                        children: [
-                          Icon(Iconsax.danger, size: 18, color: Colors.orange),
-                          SizedBox(width: 12),
-                          Text(
-                            'Low Stock',
-                            style: TextStyle(
-                              color: AppColors.getTextPrimary(isDark),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Obx(
+                        () => DropdownButtonFormField<String>(
+                          value: controller.selectedCategory.value.isEmpty
+                              ? 'All'
+                              : controller.selectedCategory.value,
+                          style: TextStyle(
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                          dropdownColor: AppColors.getSurfaceColor(isDark),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurfaceVariant
+                                : Colors.grey[50],
+                            prefixIcon: Icon(
+                              Iconsax.category,
+                              color: AppColors.getTextSecondary(isDark),
                             ),
                           ),
-                        ],
+                          items: [
+                            DropdownMenuItem(
+                              value: 'All',
+                              child: Text('All Categories'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Beverages',
+                              child: Text('Beverages'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Food',
+                              child: Text('Food'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Electronics',
+                              child: Text('Electronics'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Clothing',
+                              child: Text('Clothing'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Home & Garden',
+                              child: Text('Home & Garden'),
+                            ),
+                          ],
+                          onChanged: (value) =>
+                              controller.filterByCategory(value ?? ''),
+                        ),
                       ),
                     ),
-                    PopupMenuItem(
-                      value: 'out_of_stock',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Iconsax.close_circle,
-                            size: 18,
-                            color: Colors.red,
-                          ),
-                          SizedBox(width: 12),
-                          Text(
-                            'Out of Stock',
-                            style: TextStyle(
-                              color: AppColors.getTextPrimary(isDark),
-                            ),
-                          ),
-                        ],
+                    SizedBox(width: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.getDivider(isDark)),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'in_stock',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Iconsax.tick_circle,
-                            size: 18,
-                            color: Colors.green,
+                      child: PopupMenuButton<String>(
+                        icon: Icon(
+                          Iconsax.filter,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        color: AppColors.getSurfaceColor(isDark),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'all',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Iconsax.box,
+                                  size: 18,
+                                  color: AppColors.getTextSecondary(isDark),
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  'All Products',
+                                  style: TextStyle(
+                                    color: AppColors.getTextPrimary(isDark),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          SizedBox(width: 12),
-                          Text(
-                            'In Stock',
-                            style: TextStyle(
-                              color: AppColors.getTextPrimary(isDark),
+                          PopupMenuItem(
+                            value: 'low_stock',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Iconsax.danger,
+                                  size: 18,
+                                  color: Colors.orange,
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  'Low Stock',
+                                  style: TextStyle(
+                                    color: AppColors.getTextPrimary(isDark),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'out_of_stock',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Iconsax.close_circle,
+                                  size: 18,
+                                  color: Colors.red,
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  'Out of Stock',
+                                  style: TextStyle(
+                                    color: AppColors.getTextPrimary(isDark),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'in_stock',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Iconsax.tick_circle,
+                                  size: 18,
+                                  color: Colors.green,
+                                ),
+                                SizedBox(width: 12),
+                                Text(
+                                  'In Stock',
+                                  style: TextStyle(
+                                    color: AppColors.getTextPrimary(isDark),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
+                        onSelected: (value) {
+                          // Filter products based on stock status
+                          // This would need to be implemented in the controller
+                        },
                       ),
                     ),
                   ],
-                  onSelected: (value) {
-                    // Filter products based on stock status
-                    // This would need to be implemented in the controller
-                  },
                 ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -324,46 +525,102 @@ class EnhancedInventoryView extends StatelessWidget {
 
       return Container(
         margin: EdgeInsets.all(24),
-        child: Row(
-          children: [
-            _buildStatCard(
-              'Total Products',
-              '$totalProducts',
-              Iconsax.box,
-              Colors.blue,
-              Colors.blue.withValues(alpha: 0.1),
-              isDark,
-            ),
-            SizedBox(width: 16),
-            _buildStatCard(
-              'Low Stock',
-              '$lowStockCount',
-              Iconsax.danger,
-              Colors.orange,
-              Colors.orange.withValues(alpha: 0.1),
-              isDark,
-            ),
-            SizedBox(width: 16),
-            _buildStatCard(
-              'Out of Stock',
-              '$outOfStockCount',
-              Iconsax.close_circle,
-              Colors.red,
-              Colors.red.withValues(alpha: 0.1),
-              isDark,
-            ),
-            SizedBox(width: 16),
-            Obx(
-              () => _buildStatCard(
-                'Total Value',
-                CurrencyFormatter.format(totalValue),
-                Iconsax.dollar_circle,
-                Colors.green,
-                Colors.green.withValues(alpha: 0.1),
-                isDark,
-              ),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+
+            if (isMobile) {
+              // Column layout for mobile
+              return Column(
+                children: [
+                  _buildStatCard(
+                    'Total Products',
+                    '$totalProducts',
+                    Iconsax.box,
+                    Colors.blue,
+                    Colors.blue.withValues(alpha: 0.1),
+                    isDark,
+                    expanded: false,
+                  ),
+                  SizedBox(height: 12),
+                  _buildStatCard(
+                    'Low Stock',
+                    '$lowStockCount',
+                    Iconsax.danger,
+                    Colors.orange,
+                    Colors.orange.withValues(alpha: 0.1),
+                    isDark,
+                    expanded: false,
+                  ),
+                  SizedBox(height: 12),
+                  _buildStatCard(
+                    'Out of Stock',
+                    '$outOfStockCount',
+                    Iconsax.close_circle,
+                    Colors.red,
+                    Colors.red.withValues(alpha: 0.1),
+                    isDark,
+                    expanded: false,
+                  ),
+                  SizedBox(height: 12),
+                  Obx(
+                    () => _buildStatCard(
+                      'Total Value',
+                      CurrencyFormatter.format(totalValue),
+                      Iconsax.dollar_circle,
+                      Colors.green,
+                      Colors.green.withValues(alpha: 0.1),
+                      isDark,
+                      expanded: false,
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            // Row layout for desktop
+            return Row(
+              children: [
+                _buildStatCard(
+                  'Total Products',
+                  '$totalProducts',
+                  Iconsax.box,
+                  Colors.blue,
+                  Colors.blue.withValues(alpha: 0.1),
+                  isDark,
+                ),
+                SizedBox(width: 16),
+                _buildStatCard(
+                  'Low Stock',
+                  '$lowStockCount',
+                  Iconsax.danger,
+                  Colors.orange,
+                  Colors.orange.withValues(alpha: 0.1),
+                  isDark,
+                ),
+                SizedBox(width: 16),
+                _buildStatCard(
+                  'Out of Stock',
+                  '$outOfStockCount',
+                  Iconsax.close_circle,
+                  Colors.red,
+                  Colors.red.withValues(alpha: 0.1),
+                  isDark,
+                ),
+                SizedBox(width: 16),
+                Obx(
+                  () => _buildStatCard(
+                    'Total Value',
+                    CurrencyFormatter.format(totalValue),
+                    Iconsax.dollar_circle,
+                    Colors.green,
+                    Colors.green.withValues(alpha: 0.1),
+                    isDark,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       );
     });
@@ -375,84 +632,398 @@ class EnhancedInventoryView extends StatelessWidget {
     IconData icon,
     Color color,
     Color bgColor,
+    bool isDark, {
+    bool expanded = true,
+  }) {
+    final card = FadeInUp(
+      duration: Duration(milliseconds: 400),
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.getSurfaceColor(isDark),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: AppColors.getTextSecondary(isDark),
+                      fontSize: 12,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getTextPrimary(isDark),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return expanded ? Expanded(child: card) : card;
+  }
+
+  Widget _buildProductsGrid(ProductController controller, bool isDark) {
+    // Keep Obx scoped tightly: only the list/grid is reactive to product list changes
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        if (isMobile) {
+          // List view for mobile - much better UX for scrolling
+          return Obx(() {
+            final products = controller.filteredProducts;
+            return ListView.separated(
+              padding: EdgeInsets.all(16),
+              itemCount: products.length,
+              separatorBuilder: (context, index) => SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                return _buildMobileProductCard(
+                  products[index],
+                  controller,
+                  isDark,
+                );
+              },
+            );
+          });
+        }
+
+        // Grid view for tablet/desktop
+        final crossAxisCount = UIConstants.gridCrossAxisCount(
+          context,
+          mobile: 2, // 2 columns on small tablets
+          tablet: 3, // 3 columns on tablet
+          desktop: 4, // 4 columns on desktop
+        );
+
+        final childAspectRatio = Responsive.value<double>(
+          context,
+          mobile: 1.0,
+          tablet: 0.85,
+          desktop: 0.75,
+        );
+
+        final spacing = UIConstants.gridSpacing(context);
+        final padding = context.screenPadding;
+
+        return Obx(() {
+          final products = controller.filteredProducts;
+          return GridView.builder(
+            padding: EdgeInsets.symmetric(
+              horizontal: padding.left,
+              vertical: UIConstants.spacing12,
+            ),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+            ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              return _buildProductCard(products[index], controller, isDark);
+            },
+          );
+        });
+      },
+    );
+  }
+
+  Widget _buildMobileProductCard(
+    ProductModel product,
+    ProductController controller,
     bool isDark,
   ) {
-    return Expanded(
-      child: FadeInUp(
-        duration: Duration(milliseconds: 400),
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.getSurfaceColor(isDark),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isDark
-                ? []
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: bgColor,
+    final stockStatus = _getStockStatus(product);
+
+    return FadeInUp(
+      duration: Duration(milliseconds: 300),
+      child: Card(
+        color: AppColors.getSurfaceColor(isDark),
+        elevation: isDark ? 4 : 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: InkWell(
+          onTap: () => _showProductDetails(product, controller, isDark),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product Image
+                ClipRRect(
                   borderRadius: BorderRadius.circular(12),
+                  child: LocalImageWidget(
+                    imagePath: product.imageUrl,
+                    height: 100,
+                    width: 100,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
-                        fontSize: 12,
+                SizedBox(width: 12),
+                // Product Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              product.name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.getTextPrimary(isDark),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          PopupMenuButton(
+                            icon: Icon(
+                              Icons.more_vert,
+                              size: 20,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            color: AppColors.getSurfaceColor(isDark),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Iconsax.edit,
+                                      size: 18,
+                                      color: AppColors.getTextSecondary(isDark),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Edit',
+                                      style: TextStyle(
+                                        color: AppColors.getTextPrimary(isDark),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => Future.delayed(
+                                  Duration.zero,
+                                  () => _showEditProductDialog(
+                                    product,
+                                    controller,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Iconsax.add_square,
+                                      size: 18,
+                                      color: AppColors.getTextSecondary(isDark),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Adjust Stock',
+                                      style: TextStyle(
+                                        color: AppColors.getTextPrimary(isDark),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => Future.delayed(
+                                  Duration.zero,
+                                  () =>
+                                      _showStockAdjustment(product, controller),
+                                ),
+                              ),
+                              if (product.variants != null &&
+                                  product.variants!.isNotEmpty)
+                                PopupMenuItem(
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Iconsax.category_2,
+                                        size: 18,
+                                        color: AppColors.getTextSecondary(
+                                          isDark,
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'View Variants',
+                                        style: TextStyle(
+                                          color: AppColors.getTextPrimary(
+                                            isDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  onTap: () => Future.delayed(
+                                    Duration.zero,
+                                    () => _showVariantsDialog(
+                                      product,
+                                      controller,
+                                    ),
+                                  ),
+                                ),
+                              PopupMenuItem(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Iconsax.trash,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () =>
+                                    controller.deleteProduct(product.id),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.getTextPrimary(isDark),
+                      SizedBox(height: 4),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              (isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary)
+                                  .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          product.category,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.barcode,
+                            size: 14,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            product.sku ?? 'No SKU',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Obx(
+                            () => Text(
+                              CurrencyFormatter.format(product.price),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppColors.darkPrimary
+                                    : AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: stockStatus['color'],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  stockStatus['icon'],
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '${product.totalStock} ${product.unit}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildProductsGrid(ProductController controller, bool isDark) {
-    return Obx(() {
-      final products = controller.filteredProducts;
-      return GridView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 0),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          return _buildProductCard(products[index], controller, isDark);
-        },
-      );
-    });
   }
 
   Widget _buildProductCard(
@@ -575,30 +1146,34 @@ class EnhancedInventoryView extends StatelessWidget {
                       Spacer(),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Obx(
-                                () => Text(
-                                  CurrencyFormatter.format(product.price),
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? AppColors.darkPrimary
-                                        : AppColors.primary,
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Obx(
+                                  () => Text(
+                                    CurrencyFormatter.format(product.price),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.primary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Text(
-                                'Stock: ${product.totalStock} ${product.unit}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.getTextSecondary(isDark),
+                                Text(
+                                  'Stock: ${product.totalStock} ${product.unit}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.getTextSecondary(isDark),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           PopupMenuButton(
                             icon: Icon(
@@ -746,8 +1321,8 @@ class EnhancedInventoryView extends StatelessWidget {
 
   Widget _buildEmptyState(bool isDark) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: ListView(
+        shrinkWrap: true,
         children: [
           Icon(Iconsax.box, size: 80, color: AppColors.getTextTertiary(isDark)),
           SizedBox(height: 16),
@@ -763,6 +1338,7 @@ class EnhancedInventoryView extends StatelessWidget {
             'Add your first product to get started',
             style: TextStyle(color: AppColors.getTextSecondary(isDark)),
           ),
+          SizedBox(height: 20),
         ],
       ),
     );
@@ -914,7 +1490,7 @@ class EnhancedInventoryView extends StatelessWidget {
                           ),
                         ),
                         trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Obx(
@@ -923,15 +1499,21 @@ class EnhancedInventoryView extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.getTextPrimary(isDark),
+                                  fontSize: 14,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            SizedBox(height: 2),
                             Text(
                               'Stock: ${variant.stock}',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11,
                                 color: AppColors.getTextSecondary(isDark),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -1028,6 +1610,54 @@ class EnhancedInventoryView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  List<PopupMenuEntry<String>> _buildFilterMenuItems(bool isDark) {
+    return [
+      PopupMenuItem(
+        value: 'all',
+        child: Row(
+          children: [
+            Icon(
+              Iconsax.box,
+              size: 18,
+              color: AppColors.getTextSecondary(isDark),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'All Products',
+              style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+            ),
+          ],
+        ),
+      ),
+      PopupMenuItem(
+        value: 'low_stock',
+        child: Row(
+          children: [
+            Icon(Iconsax.danger, size: 18, color: Colors.orange),
+            SizedBox(width: 12),
+            Text(
+              'Low Stock',
+              style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+            ),
+          ],
+        ),
+      ),
+      PopupMenuItem(
+        value: 'out_of_stock',
+        child: Row(
+          children: [
+            Icon(Iconsax.close_circle, size: 18, color: Colors.red),
+            SizedBox(width: 12),
+            Text(
+              'Out of Stock',
+              style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+            ),
+          ],
+        ),
+      ),
+    ];
   }
 
   void _showAddProductDialog(ProductController controller) {

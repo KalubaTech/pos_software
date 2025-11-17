@@ -84,6 +84,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     final isEdit = widget.product != null;
     final appearanceController = Get.find<AppearanceController>();
     final isDark = appearanceController.isDarkMode.value;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Theme(
       data: isDark
@@ -142,22 +143,37 @@ class _AddProductDialogState extends State<AddProductDialog> {
             ),
       child: Dialog(
         backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+        ),
+        insetPadding: isMobile
+            ? EdgeInsets.all(16)
+            : EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         child: Container(
-          width: 900,
-          height: 700,
+          width: isMobile ? double.infinity : 900,
+          height: isMobile ? null : 700,
+          constraints: isMobile
+              ? BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.92,
+                )
+              : null,
           child: Column(
             children: [
-              _buildHeader(isEdit, isDark),
-              Expanded(
-                child: Row(
-                  children: [
-                    _buildStepper(isDark),
-                    Expanded(child: _buildStepContent(isDark)),
-                  ],
+              _buildHeader(isEdit, isDark, isMobile),
+              if (!isMobile) ...[
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildStepper(isDark),
+                      Expanded(child: _buildStepContent(isDark, isMobile)),
+                    ],
+                  ),
                 ),
-              ),
-              _buildFooter(isEdit, isDark),
+              ] else ...[
+                _buildMobileStepIndicator(isDark),
+                Expanded(child: _buildStepContent(isDark, isMobile)),
+              ],
+              _buildFooter(isEdit, isDark, isMobile),
             ],
           ),
         ),
@@ -165,7 +181,89 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildHeader(bool isEdit, bool isDark) {
+  Widget _buildMobileStepIndicator(bool isDark) {
+    final steps = ['Basic', 'Pricing', 'Variants', 'Review'];
+
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[100],
+        border: Border(
+          bottom: BorderSide(color: AppColors.getDivider(isDark), width: 1),
+        ),
+      ),
+      child: Row(
+        children: List.generate(steps.length, (index) {
+          final isActive = index == _currentStep;
+          final isCompleted = index < _currentStep;
+
+          return Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? (isDark
+                                    ? AppColors.darkPrimary
+                                    : AppColors.primary)
+                              : isCompleted
+                              ? Colors.green
+                              : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: isCompleted
+                              ? Icon(Icons.check, color: Colors.white, size: 16)
+                              : Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        steps[index],
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isActive
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isActive
+                              ? (isDark
+                                    ? AppColors.darkPrimary
+                                    : AppColors.primary)
+                              : AppColors.getTextSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (index < steps.length - 1)
+                  Container(
+                    width: 20,
+                    height: 2,
+                    color: isCompleted
+                        ? Colors.green
+                        : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                  ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isEdit, bool isDark, bool isMobile) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -183,24 +281,26 @@ class _AddProductDialogState extends State<AddProductDialog> {
         children: [
           Icon(Iconsax.box_add, color: Colors.white, size: 32),
           SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? 'Edit Product' : 'Add New Product',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isEdit ? 'Edit Product' : 'Add New Product',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    overflow: TextOverflow.ellipsis
+                  ),
                 ),
-              ),
-              Text(
-                'Fill in the product details',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
+                Text(
+                  'Fill in the product details',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
           ),
-          Spacer(),
           IconButton(
             onPressed: () => Get.back(),
             icon: Icon(Icons.close, color: Colors.white),
@@ -272,46 +372,46 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildStepContent(bool isDark) {
+  Widget _buildStepContent(bool isDark, bool isMobile) {
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
-        child: _getStepWidget(isDark),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
+        child: _getStepWidget(isDark, isMobile),
       ),
     );
   }
 
-  Widget _getStepWidget(bool isDark) {
+  Widget _getStepWidget(bool isDark, bool isMobile) {
     switch (_currentStep) {
       case 0:
-        return _buildBasicInfoStep(isDark);
+        return _buildBasicInfoStep(isDark, isMobile);
       case 1:
-        return _buildPricingStep(isDark);
+        return _buildPricingStep(isDark, isMobile);
       case 2:
-        return _buildVariantsStep(isDark);
+        return _buildVariantsStep(isDark, isMobile);
       case 3:
-        return _buildReviewStep(isDark);
+        return _buildReviewStep(isDark, isMobile);
       default:
-        return _buildBasicInfoStep(isDark);
+        return _buildBasicInfoStep(isDark, isMobile);
     }
   }
 
-  Widget _buildBasicInfoStep(bool isDark) {
+  Widget _buildBasicInfoStep(bool isDark, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Basic Information',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: isMobile ? 18 : 20,
             fontWeight: FontWeight.bold,
             color: AppColors.getTextPrimary(isDark),
           ),
         ),
-        SizedBox(height: 24),
-        _buildImagePicker(isDark),
-        SizedBox(height: 24),
+        SizedBox(height: isMobile ? 16 : 24),
+        _buildImagePicker(isDark, isMobile),
+        SizedBox(height: isMobile ? 16 : 24),
         TextFormField(
           controller: _nameController,
           decoration: InputDecoration(
@@ -338,10 +438,15 @@ class _AddProductDialogState extends State<AddProductDialog> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedCategory,
+                style: TextStyle(
+                  overflow: TextOverflow.ellipsis,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Category *',
-                  prefixIcon: Icon(Iconsax.category),
+                  labelStyle: TextStyle(overflow: TextOverflow.ellipsis),
+                  prefixIcon: Icon(Iconsax.category, size: 16,),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -361,7 +466,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
                         ]
                         .map(
                           (cat) =>
-                              DropdownMenuItem(value: cat, child: Text(cat)),
+                              DropdownMenuItem(value: cat, child: Text(cat, overflow: TextOverflow.ellipsis)),
                         )
                         .toList(),
                 onChanged: (value) {
@@ -437,58 +542,106 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildPricingStep(bool isDark) {
+  Widget _buildPricingStep(bool isDark, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Pricing & Inventory',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _priceController,
-                decoration: InputDecoration(
-                  labelText: 'Selling Price *',
-                  prefixIcon: Icon(Iconsax.dollar_circle),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+        SizedBox(height: isMobile ? 16 : 24),
+        isMobile
+            ? Column(
+                children: [
+                  TextFormField(
+                    controller: _priceController,
+                    decoration: InputDecoration(
+                      labelText: 'Selling Price *',
+                      prefixIcon: Icon(Iconsax.dollar_circle),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixText: '\$ ',
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    validator: (value) {
+                      if (value?.isEmpty ?? true) return 'Price is required';
+                      if (double.tryParse(value!) == null)
+                        return 'Invalid price';
+                      return null;
+                    },
                   ),
-                  prefixText: '\$ ',
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return 'Price is required';
-                  if (double.tryParse(value!) == null) return 'Invalid price';
-                  return null;
-                },
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: TextFormField(
-                controller: _costPriceController,
-                decoration: InputDecoration(
-                  labelText: 'Cost Price',
-                  prefixIcon: Icon(Iconsax.money),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  SizedBox(height: 16),
+                  TextFormField(
+                    controller: _costPriceController,
+                    decoration: InputDecoration(
+                      labelText: 'Cost Price',
+                      prefixIcon: Icon(Iconsax.money),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixText: '\$ ',
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
-                  prefixText: '\$ ',
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _priceController,
+                      decoration: InputDecoration(
+                        labelText: 'Selling Price *',
+                        prefixIcon: Icon(Iconsax.dollar_circle),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixText: '\$ ',
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value?.isEmpty ?? true) return 'Price is required';
+                        if (double.tryParse(value!) == null)
+                          return 'Invalid price';
+                        return null;
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _costPriceController,
+                      decoration: InputDecoration(
+                        labelText: 'Cost Price',
+                        prefixIcon: Icon(Iconsax.money),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixText: '\$ ',
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
         SizedBox(height: 16),
         if (_costPriceController.text.isNotEmpty &&
             _priceController.text.isNotEmpty)
           _buildProfitMarginCard(),
-        SizedBox(height: 24),
+        SizedBox(height: isMobile ? 16 : 24),
         SwitchListTile(
           value: _trackInventory,
           onChanged: (value) => setState(() => _trackInventory = value),
@@ -498,46 +651,86 @@ class _AddProductDialogState extends State<AddProductDialog> {
         ),
         if (_trackInventory) ...[
           SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _stockController,
-                  decoration: InputDecoration(
-                    labelText: 'Initial Stock *',
-                    prefixIcon: Icon(Iconsax.box),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+          isMobile
+              ? Column(
+                  children: [
+                    TextFormField(
+                      controller: _stockController,
+                      decoration: InputDecoration(
+                        labelText: 'Initial Stock *',
+                        prefixIcon: Icon(Iconsax.box),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        suffixText: _selectedUnit,
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (!_trackInventory) return null;
+                        if (value?.isEmpty ?? true) return 'Stock is required';
+                        if (int.tryParse(value!) == null)
+                          return 'Invalid stock';
+                        return null;
+                      },
                     ),
-                    suffixText: _selectedUnit,
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (!_trackInventory) return null;
-                    if (value?.isEmpty ?? true) return 'Stock is required';
-                    if (int.tryParse(value!) == null) return 'Invalid stock';
-                    return null;
-                  },
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _minStockController,
-                  decoration: InputDecoration(
-                    labelText: 'Minimum Stock Level',
-                    prefixIcon: Icon(Iconsax.danger),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    SizedBox(height: 16),
+                    TextFormField(
+                      controller: _minStockController,
+                      decoration: InputDecoration(
+                        labelText: 'Minimum Stock Level',
+                        prefixIcon: Icon(Iconsax.danger),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        suffixText: _selectedUnit,
+                        helperText: 'Alert when stock falls below this',
+                      ),
+                      keyboardType: TextInputType.number,
                     ),
-                    suffixText: _selectedUnit,
-                    helperText: 'Alert when stock falls below this',
-                  ),
-                  keyboardType: TextInputType.number,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _stockController,
+                        decoration: InputDecoration(
+                          labelText: 'Initial Stock *',
+                          prefixIcon: Icon(Iconsax.box),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          suffixText: _selectedUnit,
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (!_trackInventory) return null;
+                          if (value?.isEmpty ?? true)
+                            return 'Stock is required';
+                          if (int.tryParse(value!) == null)
+                            return 'Invalid stock';
+                          return null;
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _minStockController,
+                        decoration: InputDecoration(
+                          labelText: 'Minimum Stock Level',
+                          prefixIcon: Icon(Iconsax.danger),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          suffixText: _selectedUnit,
+                          helperText: 'Alert when stock falls below this',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ],
       ],
     );
@@ -583,27 +776,59 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildVariantsStep(bool isDark) {
+  Widget _buildVariantsStep(bool isDark, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Product Variants',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            ElevatedButton.icon(
-              onPressed: _addVariant,
-              icon: Icon(Iconsax.add, color: Colors.white),
-              label: Text('Add Variant', style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+        isMobile
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Product Variants',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _addVariant,
+                      icon: Icon(Iconsax.add, color: Colors.white),
+                      label: Text(
+                        'Add Variant',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Product Variants',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _addVariant,
+                    icon: Icon(Iconsax.add, color: Colors.white),
+                    label: Text(
+                      'Add Variant',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
         SizedBox(height: 16),
         Text(
           'Add variations like size, color, or storage capacity',
@@ -675,20 +900,24 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildReviewStep(bool isDark) {
+  Widget _buildReviewStep(bool isDark, bool isMobile) {
     final sellingPrice = double.tryParse(_priceController.text) ?? 0;
     final costPrice = double.tryParse(_costPriceController.text) ?? 0;
     final stock = int.tryParse(_stockController.text) ?? 0;
     final minStock = int.tryParse(_minStockController.text) ?? 10;
+    final imageSize = isMobile ? 120.0 : 200.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Review Product',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        SizedBox(height: 24),
+        SizedBox(height: isMobile ? 16 : 24),
         if (_imageUrl != null || _localImage != null)
           Center(
             child: ClipRRect(
@@ -696,19 +925,19 @@ class _AddProductDialogState extends State<AddProductDialog> {
               child: _localImage != null
                   ? Image.file(
                       _localImage!,
-                      height: 200,
-                      width: 200,
+                      height: imageSize,
+                      width: imageSize,
                       fit: BoxFit.cover,
                     )
                   : LocalImageWidget(
                       imagePath: _imageUrl,
-                      height: 200,
-                      width: 200,
+                      height: imageSize,
+                      width: imageSize,
                       fit: BoxFit.cover,
                     ),
             ),
           ),
-        SizedBox(height: 24),
+        SizedBox(height: isMobile ? 16 : 24),
         _buildReviewRow('Product Name', _nameController.text),
         _buildReviewRow('Category', _selectedCategory),
         _buildReviewRow('Description', _descriptionController.text),
@@ -762,13 +991,14 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildImagePicker(bool isDark) {
+  Widget _buildImagePicker(bool isDark, bool isMobile) {
+    final imageSize = isMobile ? 100.0 : 150.0;
     return Center(
       child: GestureDetector(
         onTap: _pickImage,
         child: Container(
-          width: 150,
-          height: 150,
+          width: imageSize,
+          height: imageSize,
           decoration: BoxDecoration(
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(12),
@@ -783,8 +1013,8 @@ class _AddProductDialogState extends State<AddProductDialog> {
                   borderRadius: BorderRadius.circular(10),
                   child: LocalImageWidget(
                     imagePath: _imageUrl,
-                    width: 150,
-                    height: 150,
+                    width: imageSize,
+                    height: imageSize,
                     fit: BoxFit.cover,
                   ),
                 )
@@ -793,13 +1023,16 @@ class _AddProductDialogState extends State<AddProductDialog> {
                   children: [
                     Icon(
                       Iconsax.gallery_add,
-                      size: 48,
+                      size: isMobile ? 32 : 48,
                       color: Colors.grey[600],
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Add Image',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: isMobile ? 12 : 14,
+                      ),
                     ),
                   ],
                 ),
@@ -808,11 +1041,11 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  Widget _buildFooter(bool isEdit, bool isDark) {
+  Widget _buildFooter(bool isEdit, bool isDark, bool isMobile) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 12 : 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -821,50 +1054,136 @@ class _AddProductDialogState extends State<AddProductDialog> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          if (_currentStep > 0)
-            TextButton.icon(
-              onPressed: () => setState(() => _currentStep--),
-              icon: Icon(Icons.arrow_back),
-              label: Text('Back'),
-            )
-          else
-            SizedBox(),
-          Row(
-            children: [
-              TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
-              SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: _currentStep < 3
-                    ? () {
-                        if (_currentStep == 0 || _currentStep == 1) {
-                          if (_formKey.currentState?.validate() ?? false) {
+      child: isMobile
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _currentStep < 3
+                      ? () {
+                          if (_currentStep == 0 || _currentStep == 1) {
+                            if (_formKey.currentState?.validate() ?? false) {
+                              setState(() => _currentStep++);
+                            }
+                          } else {
                             setState(() => _currentStep++);
                           }
-                        } else {
-                          setState(() => _currentStep++);
                         }
-                      }
-                    : _saveProduct,
-                icon: Icon(
-                  _currentStep < 3 ? Icons.arrow_forward : Iconsax.tick_circle,
-                  color: Colors.white,
+                      : _saveProduct,
+                  icon: Icon(
+                    _currentStep < 3
+                        ? Icons.arrow_forward
+                        : Iconsax.tick_circle,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    _currentStep < 3 ? 'Next' : (isEdit ? 'Update' : 'Create'),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark
+                        ? AppColors.darkPrimary
+                        : AppColors.primary,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-                label: Text(
-                  _currentStep < 3 ? 'Next' : (isEdit ? 'Update' : 'Create'),
-                  style: TextStyle(color: Colors.white),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (_currentStep > 0) ...[
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => setState(() => _currentStep--),
+                          icon: Icon(Icons.arrow_back),
+                          label: Text('Back'),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Get.back(),
+                        child: Text('Cancel'),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (_currentStep > 0)
+                  TextButton.icon(
+                    onPressed: () => setState(() => _currentStep--),
+                    icon: Icon(Icons.arrow_back),
+                    label: Text('Back'),
+                  )
+                else
+                  SizedBox(),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: Text('Cancel'),
+                    ),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _currentStep < 3
+                          ? () {
+                              if (_currentStep == 0 || _currentStep == 1) {
+                                if (_formKey.currentState?.validate() ??
+                                    false) {
+                                  setState(() => _currentStep++);
+                                }
+                              } else {
+                                setState(() => _currentStep++);
+                              }
+                            }
+                          : _saveProduct,
+                      icon: Icon(
+                        _currentStep < 3
+                            ? Icons.arrow_forward
+                            : Iconsax.tick_circle,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        _currentStep < 3
+                            ? 'Next'
+                            : (isEdit ? 'Update' : 'Create'),
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
     );
   }
 

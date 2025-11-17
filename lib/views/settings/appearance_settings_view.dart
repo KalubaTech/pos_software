@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
+import '../../utils/responsive.dart';
 
 class AppearanceSettingsView extends StatelessWidget {
   const AppearanceSettingsView({super.key});
@@ -18,7 +19,7 @@ class AppearanceSettingsView extends StatelessWidget {
         backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
         body: Column(
           children: [
-            _buildHeader(controller, isDark),
+            _buildHeader(context, controller, isDark),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
@@ -44,9 +45,13 @@ class AppearanceSettingsView extends StatelessWidget {
     });
   }
 
-  Widget _buildHeader(AppearanceController controller, bool isDark) {
+  Widget _buildHeader(
+    BuildContext context,
+    AppearanceController controller,
+    bool isDark,
+  ) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceColor(isDark),
         boxShadow: [
@@ -57,96 +62,190 @@ class AppearanceSettingsView extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Appearance Settings',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.getTextPrimary(isDark),
+      child: context.isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Appearance',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Customize the look and feel of your POS',
-                style: TextStyle(
-                  color: AppColors.getTextSecondary(isDark),
-                  fontSize: 14,
+                SizedBox(height: 4),
+                Text(
+                  'Customize look & feel',
+                  style: TextStyle(
+                    color: AppColors.getTextSecondary(isDark),
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  Get.dialog(
-                    AlertDialog(
-                      backgroundColor: AppColors.getSurfaceColor(isDark),
-                      title: Text(
-                        'Reset to Defaults',
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _showResetDialog(controller, isDark);
+                        },
+                        icon: Icon(
+                          Iconsax.refresh,
+                          size: 16,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        label: Text(
+                          'Reset',
+                          style: TextStyle(
+                            color: AppColors.getTextPrimary(isDark),
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.getDivider(isDark)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Get.snackbar(
+                            'Saved',
+                            'Appearance settings saved',
+                            backgroundColor: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                            colorText: Colors.white,
+                          );
+                        },
+                        icon: Icon(Iconsax.tick_circle, size: 16),
+                        label: Text('Save', style: TextStyle(fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Appearance Settings',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Customize the look and feel of your POS',
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 16),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        _showResetDialog(controller, isDark);
+                      },
+                      icon: Icon(
+                        Iconsax.refresh,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                      label: Text(
+                        'Reset',
                         style: TextStyle(
                           color: AppColors.getTextPrimary(isDark),
                         ),
                       ),
-                      content: Text(
-                        'Are you sure you want to reset appearance to default?',
-                        style: TextStyle(
-                          color: AppColors.getTextSecondary(isDark),
-                        ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.getDivider(isDark)),
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Get.back(),
-                          child: Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            controller.resetToDefaults();
-                            Get.back();
-                            Get.snackbar(
-                              'Reset',
-                              'Appearance reset to defaults',
-                              backgroundColor: Colors.orange,
-                              colorText: Colors.white,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                          ),
-                          child: Text(
-                            'Reset',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
                     ),
-                  );
-                },
-                icon: Icon(Iconsax.refresh),
-                label: Text('Reset to Defaults'),
-              ),
-              SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () => controller.saveSettings(),
-                icon: Icon(Iconsax.save_2, color: Colors.white),
-                label: Text(
-                  'Save Changes',
-                  style: TextStyle(color: Colors.white),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Get.snackbar(
+                          'Saved',
+                          'Appearance settings saved',
+                          backgroundColor: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                          colorText: Colors.white,
+                        );
+                      },
+                      icon: Icon(Iconsax.tick_circle),
+                      label: Text('Save Changes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark
-                      ? AppColors.darkPrimary
-                      : AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
-              ),
-            ],
+              ],
+            ),
+    );
+  }
+
+  void _showResetDialog(AppearanceController controller, bool isDark) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: AppColors.getSurfaceColor(isDark),
+        title: Text(
+          'Reset to Defaults',
+          style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+        ),
+        content: Text(
+          'Are you sure you want to reset appearance to default?',
+          style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              controller.resetToDefaults();
+              Get.back();
+              Get.snackbar(
+                'Reset',
+                'Appearance reset to defaults',
+                backgroundColor: Colors.orange,
+                colorText: Colors.white,
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: Text('Reset', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:pos_software/controllers/navigations_controller.dart';
 import 'package:get/get.dart';
 import '../../constants/constants.dart';
+import '../../utils/responsive.dart';
 
 class MainSideNavigationBar extends StatefulWidget {
   const MainSideNavigationBar({super.key});
@@ -13,20 +14,17 @@ class MainSideNavigationBar extends StatefulWidget {
 }
 
 class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
-  // Controls the sidebar width (expanded or collapsed)
-  bool _isWidthExpanded = true;
-  // Controls whether titles are shown. When false only icons are visible.
-  bool _showTitles = false;
   int _selectedIndex = 0;
 
-  final double expandedWidth = 230.0;
-  final double collapsedWidth = 60.0; 
+  // Collapsed width for Windows desktop (icon-only)
+  final double collapsedWidth = 60.0;
 
   final List<String> menuItems = [
     'Dashboard',
     'Transactions',
     'Customers',
     'Inventory',
+    'Wallet',
     'Reports',
     'Price Tags',
     'Settings',
@@ -34,39 +32,32 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
 
   NavigationsController _navigationsController = Get.find();
 
-  void _toggleTitles() {
-    setState(() {
-      _showTitles = !_showTitles;
-      // if we hide titles make sure width is collapsed (icons-only)
-      if (!_showTitles) _isWidthExpanded = false;
-      // if we reveal titles expand width so titles can be shown
-      if (_showTitles) _isWidthExpanded = true;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final currentWidth = collapsedWidth;
+    // On mobile (drawer), show full width with labels
+    // On desktop, always stay collapsed (icon-only)
+    final bool isDrawer = Responsive.isMobile(context);
+    final double currentWidth = isDrawer ? 250.0 : collapsedWidth;
+    final bool showLabels = isDrawer;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOutCubic,
+    return Container(
       width: currentWidth,
       color: Theme.of(context).colorScheme.surface,
       child: Material(
         type: MaterialType.transparency,
         child: Column(
-          crossAxisAlignment: _showTitles
+          crossAxisAlignment: showLabels
               ? CrossAxisAlignment.start
               : CrossAxisAlignment.center,
           children: [
+            // App Logo/Icon at top
             Padding(
               padding: EdgeInsets.only(
                 top: 20.0,
-                left: _showTitles ? 24.0 : 0,
+                left: showLabels ? 24.0 : 0,
                 bottom: 20.0,
               ),
-              child: _showTitles
+              child: showLabels
                   ? Text(
                       '${Constants.appName}',
                       style: Theme.of(context).textTheme.headlineSmall
@@ -75,8 +66,14 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                     )
-                  : const Icon(Iconsax.shop, size: 28),
+                  : Icon(
+                      Iconsax.shop,
+                      size: 32,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
             ),
+
+            // Menu Items
             Expanded(
               child: ListView.builder(
                 itemCount: menuItems.length,
@@ -85,36 +82,41 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
                   return SidebarButtonItem(
                     title: item,
                     icon: _getIconForMenuItem(item),
-                    isExpanded: _showTitles,
+                    isExpanded: showLabels,
                     isSelected: _selectedIndex == index,
                     onTap: () {
                       setState(() {
                         _selectedIndex = index;
                       });
                       _navigationsController.mainNavigation(item.toLowerCase());
+
+                      // Close drawer on mobile after selection
+                      if (isDrawer) {
+                        Navigator.of(context).pop();
+                      }
                     },
                   );
                 },
               ),
             ),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // collapse / expand width button
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
+            // Bottom section (logout button or user info)
+            if (!showLabels)
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Tooltip(
+                  message: 'Sign out',
                   child: IconButton(
                     icon: Icon(
                       Iconsax.logout,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    onPressed: null,
-                    tooltip: 'Logout'
+                    onPressed: () {
+                      // Can show a popup menu or bottom sheet here
+                    },
                   ),
                 ),
-                // hide / reveal titles button - when hidden only icons sho
-              ],
-            ),
+              ),
           ],
         ),
       ),

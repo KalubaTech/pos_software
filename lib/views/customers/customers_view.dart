@@ -5,6 +5,8 @@ import '../../controllers/customer_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../models/client_model.dart';
 import '../../utils/colors.dart';
+import '../../utils/responsive.dart';
+import '../../utils/ui_constants.dart';
 
 class CustomersView extends StatelessWidget {
   const CustomersView({super.key});
@@ -49,7 +51,7 @@ class CustomersView extends StatelessWidget {
 
   Widget _buildHeader(CustomerController controller, bool isDark) {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: Get.context!.screenPadding,
       decoration: BoxDecoration(
         color: AppColors.getSurfaceColor(isDark),
         border: Border(
@@ -65,18 +67,21 @@ class CustomersView extends StatelessWidget {
               Text(
                 'Customers',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: Get.context!.fontSizeHeadline,
                   fontWeight: FontWeight.bold,
                   color: AppColors.getTextPrimary(isDark),
                 ),
               ),
               Obx(
                 () => Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: UIConstants.spacing12,
+                    vertical: UIConstants.spacing8,
+                  ),
                   decoration: BoxDecoration(
                     color: (isDark ? AppColors.darkPrimary : AppColors.primary)
                         .withOpacity(isDark ? 0.2 : 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: UIConstants.borderRadiusMedium,
                     border: Border.all(
                       color:
                           (isDark ? AppColors.darkPrimary : AppColors.primary)
@@ -86,7 +91,7 @@ class CustomersView extends StatelessWidget {
                   child: Text(
                     '${controller.filteredCustomers.length} customers',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: Get.context!.fontSizeBody,
                       color: isDark ? AppColors.darkPrimary : AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -95,7 +100,7 @@ class CustomersView extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 16),
+          UIConstants.verticalSpace(UIConstants.spacing16),
           TextField(
             style: TextStyle(color: AppColors.getTextPrimary(isDark)),
             decoration: InputDecoration(

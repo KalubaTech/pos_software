@@ -9,6 +9,7 @@ import '../../services/subscription_service.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../controllers/business_settings_controller.dart';
 import '../../utils/colors.dart';
+import '../../utils/responsive.dart';
 import 'package:intl/intl.dart';
 // import '../../debug_unresolved_test.dart'; // Commented out for production build
 
@@ -244,6 +245,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
               FadeInUp(
                 duration: Duration(milliseconds: 400),
                 child: _buildPlansSection(
+                  context,
                   subscriptionService,
                   businessController,
                   isDark,
@@ -788,6 +790,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
   }
 
   Widget _buildPlansSection(
+    BuildContext context,
     SubscriptionService subscriptionService,
     BusinessSettingsController businessController,
     bool isDark,
@@ -810,14 +813,15 @@ class _SubscriptionViewState extends State<SubscriptionView> {
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
+            crossAxisCount: context.isMobile ? 1 : 3,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 0.75,
+            childAspectRatio: context.isMobile ? 0.85 : 0.65,
           ),
           itemCount: plans.length,
           itemBuilder: (context, index) {
             return _buildPlanCard(
+              context,
               plans[index],
               subscriptionService,
               businessController,
@@ -830,6 +834,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
   }
 
   Widget _buildPlanCard(
+    BuildContext context,
     SubscriptionPlanOption plan,
     SubscriptionService subscriptionService,
     BusinessSettingsController businessController,
@@ -839,7 +844,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
     final isCurrentPlan = currentPlan == plan.plan;
 
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(context.isMobile ? 16 : 20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -876,7 +881,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 ),
               ),
             ),
-          if (plan.isPopular) SizedBox(height: 12),
+          if (plan.isPopular) SizedBox(height: context.isMobile ? 8 : 12),
           if (isCurrentPlan)
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -894,31 +899,33 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 ),
               ),
             ),
-          if (isCurrentPlan) SizedBox(height: 12),
+          if (isCurrentPlan) SizedBox(height: context.isMobile ? 8 : 12),
           Text(
             plan.title,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: context.isMobile ? 18 : 24,
               fontWeight: FontWeight.bold,
               color: AppColors.getTextPrimary(isDark),
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: context.isMobile ? 2 : 4),
           Text(
             plan.subtitle,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: context.isMobile ? 10 : 13,
               color: AppColors.getTextSecondary(isDark),
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          SizedBox(height: 16),
+          SizedBox(height: context.isMobile ? 8 : 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'K',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: context.isMobile ? 14 : 20,
                   fontWeight: FontWeight.w600,
                   color: Colors.blue,
                 ),
@@ -926,25 +933,28 @@ class _SubscriptionViewState extends State<SubscriptionView> {
               Text(
                 plan.price.toStringAsFixed(0),
                 style: TextStyle(
-                  fontSize: 36,
+                  fontSize: context.isMobile ? 24 : 36,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 4),
+          SizedBox(height: context.isMobile ? 2 : 4),
           Text(
             plan.pricePerMonth,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: context.isMobile ? 10 : 13,
               color: AppColors.getTextSecondary(isDark),
             ),
           ),
           if (plan.savings != null) ...[
-            SizedBox(height: 8),
+            SizedBox(height: context.isMobile ? 4 : 8),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.isMobile ? 8 : 10,
+                vertical: context.isMobile ? 2 : 4,
+              ),
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -953,42 +963,55 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                 'Save K${plan.savings!.toStringAsFixed(0)}',
                 style: TextStyle(
                   color: Colors.green,
-                  fontSize: 12,
+                  fontSize: context.isMobile ? 10 : 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           ],
-          SizedBox(height: 20),
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: plan.features.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+          SizedBox(height: context.isMobile ? 8 : 20),
+          ...plan.features
+              .take(context.isMobile ? 3 : plan.features.length)
+              .map(
+                (feature) => Padding(
+                  padding: EdgeInsets.only(bottom: context.isMobile ? 4 : 6),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Iconsax.tick_circle5, color: Colors.green, size: 18),
-                      SizedBox(width: 8),
-                      Expanded(
+                      Icon(
+                        Iconsax.tick_circle5,
+                        color: Colors.green,
+                        size: context.isMobile ? 12 : 18,
+                      ),
+                      SizedBox(width: context.isMobile ? 10 : 15),
+                      Expanded( 
                         child: Text(
-                          plan.features[index],
+                          feature,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: context.isMobile ? 10 : 13,
                             color: AppColors.getTextPrimary(isDark),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                );
-              },
+                ),
+              ),
+          if (context.isMobile && plan.features.length > 3)
+            Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Text(
+                '+${plan.features.length - 3} more',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: AppColors.getTextSecondary(isDark),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
-          ),
-          SizedBox(height: 16),
+          Spacer(),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1003,14 +1026,19 @@ class _SubscriptionViewState extends State<SubscriptionView> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: isCurrentPlan ? Colors.grey : Colors.blue,
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 14),
+                padding: EdgeInsets.symmetric(
+                  vertical: context.isMobile ? 10 : 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
               child: Text(
                 isCurrentPlan ? 'Current Plan' : 'Subscribe',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: context.isMobile ? 13 : 15,
+                ),
               ),
             ),
           ),
@@ -1107,12 +1135,15 @@ class _SubscriptionViewState extends State<SubscriptionView> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.getTextPrimary(isDark),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (premiumOnly) ...[
@@ -1758,353 +1789,377 @@ class _SubscriptionViewState extends State<SubscriptionView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           width: 500,
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(Get.context!).size.width * 0.9,
+            maxHeight: MediaQuery.of(Get.context!).size.height * 0.8,
+          ),
           padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Iconsax.card, color: Colors.blue),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Complete Payment',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.getTextPrimary(isDark),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Column(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Plan:',
-                          style: TextStyle(
-                            color: AppColors.getTextSecondary(isDark),
-                          ),
-                        ),
-                        Text(
-                          plan.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.getTextPrimary(isDark),
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Iconsax.card, color: Colors.blue, size: 20),
                     ),
-                    SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Amount:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: AppColors.getTextSecondary(isDark),
-                          ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Complete Payment',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(isDark),
                         ),
-                        Text(
-                          'K${plan.price.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(height: 24),
-              Obx(
-                () => DropdownButtonFormField<String>(
-                  value: paymentMethod.value,
+                SizedBox(height: 24),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.blue.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Plan:',
+                            style: TextStyle(
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                          ),
+                          Text(
+                            plan.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.getTextPrimary(isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Amount:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                          ),
+                          Text(
+                            'K${plan.price.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                Obx(
+                  () => DropdownButtonFormField<String>(
+                    value: paymentMethod.value,
+                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                    dropdownColor: AppColors.getSurfaceColor(isDark),
+                    decoration: InputDecoration(
+                      labelText: 'Payment Method',
+                      labelStyle: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      prefixIcon: Icon(
+                        Iconsax.wallet,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    items:
+                        [
+                          'Mobile Money',
+                          'MTN Mobile Money',
+                          'Airtel Money',
+                          'Zamtel Kwacha',
+                        ].map((method) {
+                          return DropdownMenuItem(
+                            value: method,
+                            child: Text(method),
+                          );
+                        }).toList(),
+                    onChanged: (value) {
+                      if (value != null) paymentMethod.value = value;
+                    },
+                  ),
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: phoneController,
                   style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                  dropdownColor: AppColors.getSurfaceColor(isDark),
                   decoration: InputDecoration(
-                    labelText: 'Payment Method',
+                    labelText: 'Phone Number',
                     labelStyle: TextStyle(
                       color: AppColors.getTextSecondary(isDark),
                     ),
+                    hintText: '0977123456',
                     prefixIcon: Icon(
-                      Iconsax.wallet,
+                      Iconsax.call,
                       color: AppColors.getTextSecondary(isDark),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  items:
-                      [
-                        'Mobile Money',
-                        'MTN Mobile Money',
-                        'Airtel Money',
-                        'Zamtel Kwacha',
-                      ].map((method) {
-                        return DropdownMenuItem(
-                          value: method,
-                          child: Text(method),
-                        );
-                      }).toList(),
-                  onChanged: (value) {
-                    if (value != null) paymentMethod.value = value;
-                  },
+                  keyboardType: TextInputType.phone,
                 ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  labelStyle: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  hintText: '0977123456',
-                  prefixIcon: Icon(
-                    Iconsax.call,
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              SizedBox(height: 24),
-              Obx(
-                () => Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: isProcessing.value ? null : () => Get.back(),
-                      child: Text('Cancel'),
-                    ),
-                    SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: isProcessing.value
-                          ? null
-                          : () async {
-                              if (phoneController.text.isEmpty) {
-                                _showResultNotification(
-                                  title: 'Missing Information',
-                                  message:
-                                      'Please enter your phone number to continue.',
-                                  type: 'warning',
-                                );
-                                return;
-                              }
-
-                              isProcessing.value = true;
-
-                              Get.back();
-
-                              try {
-                                // Determine operator from phone or payment method
-                                String operator;
-                                if (paymentMethod.value == 'MTN Mobile Money') {
-                                  operator = 'mtn';
-                                } else if (paymentMethod.value ==
-                                    'Airtel Money') {
-                                  operator = 'airtel';
-                                } else if (paymentMethod.value ==
-                                    'Zamtel Kwacha') {
-                                  operator = 'zamtel';
-                                } else {
-                                  // Auto-detect from phone number
-                                  operator =
-                                      subscriptionService.detectOperator(
-                                        phoneController.text,
-                                      ) ??
-                                      'airtel'; // Default to airtel
-                                }
-
-                                // Format phone number
-                                final formattedPhone = subscriptionService
-                                    .formatPhoneNumber(phoneController.text);
-
-                                // Show initiating message
-                                _showResultNotification(
-                                  title: 'Processing Payment...',
-                                  message:
-                                      'Initiating payment to $formattedPhone via ${operator.toUpperCase()}',
-                                  type: 'info',
-                                );
-
-                                // Process payment with real API
-                                final paymentResult = await subscriptionService
-                                    .processPayment(
-                                      plan: plan.plan,
-                                      businessId:
-                                          businessController
-                                              .storeName
-                                              .value
-                                              .isNotEmpty
-                                          ? businessController.storeName.value
-                                          : 'default',
-                                      phoneNumber: formattedPhone,
-                                      operator: operator,
-                                    );
-
-                                // Check if payment was initiated successfully
-                                if (subscriptionService.isPaymentSuccessful(
-                                  paymentResult,
-                                )) {
-                                  final status = paymentResult!['status'];
-
-                                  print('=== PAYMENT RESULT ===');
-                                  print('Status: $status');
-                                  print(
-                                    'Transaction ID: ${paymentResult['transactionId']}',
-                                  );
-                                  print(
-                                    'Lenco Reference: ${paymentResult['lencoReference']}',
-                                  );
-                                  print('====================');
-
-                                  if (status == 'pay-offline') {
-                                    // Close the dialog immediately
-
-                                    print(
-                                      'Dialog closed - starting background status checking',
-                                    );
-
-                                    // Show approval message
+                SizedBox(height: 24),
+                Obx(
+                  () => Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: isProcessing.value ? null : () => Get.back(),
+                        child: Text('Cancel'),
+                      ),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: ElevatedButton.icon(
+                          onPressed: isProcessing.value
+                              ? null
+                              : () async {
+                                  if (phoneController.text.isEmpty) {
                                     _showResultNotification(
-                                      title: 'Approval Required 📱',
+                                      title: 'Missing Information',
                                       message:
-                                          'Please check your phone and approve the payment request. We are checking the status automatically...',
+                                          'Please enter your phone number to continue.',
                                       type: 'warning',
                                     );
+                                    return;
+                                  }
 
-                                    // Start checking status in background
-                                    _checkPaymentStatus(
-                                      paymentResult: paymentResult,
-                                      plan: plan,
-                                      subscriptionService: subscriptionService,
-                                      businessController: businessController,
-                                      operator: operator,
-                                    );
-                                  } else if (status == 'completed') {
-                                    // Payment already completed (instant payment)
-                                    final success = await subscriptionService
-                                        .activateSubscription(
-                                          businessId:
-                                              businessController
-                                                  .storeName
-                                                  .value
-                                                  .isNotEmpty
-                                              ? businessController
-                                                    .storeName
-                                                    .value
-                                              : 'default',
-                                          plan: plan.plan,
-                                          transactionId:
-                                              paymentResult['transactionId'],
-                                          paymentMethod:
-                                              '$operator (${paymentResult['phone']})',
+                                  isProcessing.value = true;
+
+                                  Get.back();
+
+                                  try {
+                                    // Determine operator from phone or payment method
+                                    String operator;
+                                    if (paymentMethod.value ==
+                                        'MTN Mobile Money') {
+                                      operator = 'mtn';
+                                    } else if (paymentMethod.value ==
+                                        'Airtel Money') {
+                                      operator = 'airtel';
+                                    } else if (paymentMethod.value ==
+                                        'Zamtel Kwacha') {
+                                      operator = 'zamtel';
+                                    } else {
+                                      // Auto-detect from phone number
+                                      operator =
+                                          subscriptionService.detectOperator(
+                                            phoneController.text,
+                                          ) ??
+                                          'airtel'; // Default to airtel
+                                    }
+
+                                    // Format phone number
+                                    final formattedPhone = subscriptionService
+                                        .formatPhoneNumber(
+                                          phoneController.text,
                                         );
 
-                                    if (success) {
-                                      Get.back();
+                                    // Show initiating message
+                                    _showResultNotification(
+                                      title: 'Processing Payment...',
+                                      message:
+                                          'Initiating payment to $formattedPhone via ${operator.toUpperCase()}',
+                                      type: 'info',
+                                    );
+
+                                    // Process payment with real API
+                                    final paymentResult =
+                                        await subscriptionService
+                                            .processPayment(
+                                              plan: plan.plan,
+                                              businessId:
+                                                  businessController
+                                                      .storeName
+                                                      .value
+                                                      .isNotEmpty
+                                                  ? businessController
+                                                        .storeName
+                                                        .value
+                                                  : 'default',
+                                              phoneNumber: formattedPhone,
+                                              operator: operator,
+                                            );
+
+                                    // Check if payment was initiated successfully
+                                    if (subscriptionService.isPaymentSuccessful(
+                                      paymentResult,
+                                    )) {
+                                      final status = paymentResult!['status'];
+
+                                      print('=== PAYMENT RESULT ===');
+                                      print('Status: $status');
+                                      print(
+                                        'Transaction ID: ${paymentResult['transactionId']}',
+                                      );
+                                      print(
+                                        'Lenco Reference: ${paymentResult['lencoReference']}',
+                                      );
+                                      print('====================');
+
+                                      if (status == 'pay-offline') {
+                                        // Close the dialog immediately
+
+                                        print(
+                                          'Dialog closed - starting background status checking',
+                                        );
+
+                                        // Show approval message
+                                        _showResultNotification(
+                                          title: 'Approval Required 📱',
+                                          message:
+                                              'Please check your phone and approve the payment request. We are checking the status automatically...',
+                                          type: 'warning',
+                                        );
+
+                                        // Start checking status in background
+                                        _checkPaymentStatus(
+                                          paymentResult: paymentResult,
+                                          plan: plan,
+                                          subscriptionService:
+                                              subscriptionService,
+                                          businessController:
+                                              businessController,
+                                          operator: operator,
+                                        );
+                                      } else if (status == 'completed') {
+                                        // Payment already completed (instant payment)
+                                        final success = await subscriptionService
+                                            .activateSubscription(
+                                              businessId:
+                                                  businessController
+                                                      .storeName
+                                                      .value
+                                                      .isNotEmpty
+                                                  ? businessController
+                                                        .storeName
+                                                        .value
+                                                  : 'default',
+                                              plan: plan.plan,
+                                              transactionId:
+                                                  paymentResult['transactionId'],
+                                              paymentMethod:
+                                                  '$operator (${paymentResult['phone']})',
+                                            );
+
+                                        if (success) {
+                                          Get.back();
+                                          _showResultNotification(
+                                            title: 'Payment Successful! 🎉',
+                                            message:
+                                                'Your subscription has been activated!\nReference: ${paymentResult['lencoReference']}',
+                                            type: 'success',
+                                          );
+                                        }
+                                      }
+                                    } else {
+                                      // Payment failed
                                       _showResultNotification(
-                                        title: 'Payment Successful! 🎉',
+                                        title: 'Payment Failed',
                                         message:
-                                            'Your subscription has been activated!\nReference: ${paymentResult['lencoReference']}',
-                                        type: 'success',
+                                            paymentResult?['error'] ??
+                                            'Unable to process payment. Please try again.',
+                                        type: 'error',
                                       );
                                     }
+                                  } catch (e) {
+                                    _showResultNotification(
+                                      title: 'Payment Error',
+                                      message:
+                                          'An error occurred while processing your payment:\n$e',
+                                      type: 'error',
+                                    );
+                                  } finally {
+                                    isProcessing.value = false;
                                   }
-                                } else {
-                                  // Payment failed
-                                  _showResultNotification(
-                                    title: 'Payment Failed',
-                                    message:
-                                        paymentResult?['error'] ??
-                                        'Unable to process payment. Please try again.',
-                                    type: 'error',
-                                  );
-                                }
-                              } catch (e) {
-                                _showResultNotification(
-                                  title: 'Payment Error',
-                                  message:
-                                      'An error occurred while processing your payment:\n$e',
-                                  type: 'error',
-                                );
-                              } finally {
-                                isProcessing.value = false;
-                              }
-                            },
-                      icon: isProcessing.value
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(Iconsax.tick_circle, size: 18),
-                      label: Text(
-                        isProcessing.value
-                            ? 'Processing...'
-                            : 'Pay K${plan.price.toStringAsFixed(2)}',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                                },
+                          icon: isProcessing.value
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Icon(Iconsax.tick_circle, size: 18),
+                          label: Text(
+                            isProcessing.value
+                                ? 'Processing...'
+                                : 'Pay K${plan.price.toStringAsFixed(2)}',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Iconsax.info_circle, color: Colors.blue, size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'You will receive a prompt on your phone to complete the payment.',
-                        style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.info_circle, color: Colors.blue, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You will receive a prompt on your phone to complete the payment.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

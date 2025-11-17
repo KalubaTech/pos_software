@@ -810,190 +810,545 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
   }
 
   Widget _buildPrinterScanDialog(PrinterService printerService) {
-    return Container(
-      width: 500,
-      padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Iconsax.printer, color: Colors.blue, size: 28),
-              SizedBox(width: 12),
-              Text(
-                'Available Printers',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        return Container(
+          width: isMobile ? constraints.maxWidth * 0.95 : 500,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
           ),
-          SizedBox(height: 20),
-          Obx(() {
-            final isScanning = printerService.isScanning.value;
-            final devices = printerService.availablePrinters;
-
-            if (isScanning) {
-              return Center(
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Scanning for Bluetooth printers...'),
-                  ],
-                ),
-              );
-            }
-
-            if (devices.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Iconsax.search_status,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'No printers found',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Make sure Bluetooth is enabled and printer is in pairing mode',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                      ),
-                    ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue, Colors.blue[700]!],
                   ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
-              );
-            }
-
-            return Container(
-              constraints: BoxConstraints(maxHeight: 300),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: devices.length,
-                itemBuilder: (context, index) {
-                  final device = devices[index];
-                  return Card(
-                    margin: EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: Container(
-                        padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Iconsax.printer, color: Colors.blue),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(
-                        device.name,
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(device.macAdress),
-                      trailing: ElevatedButton(
-                        onPressed: () async {
-                          await printerService.connectPrinter(device.macAdress);
-                          Get.back();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text('Connect'),
+                      child: Icon(
+                        Iconsax.printer,
+                        color: Colors.white,
+                        size: isMobile ? 24 : 28,
                       ),
                     ),
-                  );
-                },
-              ),
-            );
-          }),
-          SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(onPressed: () => Get.back(), child: Text('Cancel')),
-              SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () => printerService.listBluetoothPrinters(),
-                icon: Icon(Iconsax.refresh, size: 18),
-                label: Text('Scan Again'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Available Printers',
+                            style: TextStyle(
+                              fontSize: isMobile ? 18 : 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Select a Bluetooth printer',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: Icon(Icons.close, color: Colors.white),
+                      tooltip: 'Close',
+                    ),
+                  ],
                 ),
+              ),
+              // Content
+              Flexible(
+                child: Container(
+                  padding: EdgeInsets.all(isMobile ? 16 : 24),
+                  child: Obx(() {
+                    final isScanning = printerService.isScanning.value;
+                    final devices = printerService.availablePrinters;
+
+                    if (isScanning) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              height: 60,
+                              child: CircularProgressIndicator(strokeWidth: 3),
+                            ),
+                            SizedBox(height: 24),
+                            Text(
+                              'Scanning for Bluetooth printers...',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Make sure your printer is powered on',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (devices.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: isMobile ? 32 : 48,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Iconsax.search_status,
+                                  size: isMobile ? 48 : 64,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                              SizedBox(height: 24),
+                              Text(
+                                'No printers found',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 16 : 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isMobile ? 24 : 32,
+                                ),
+                                child: Text(
+                                  'Make sure:\n• Bluetooth is enabled\n• Printer is powered on\n• Printer is in pairing mode',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 13 : 14,
+                                    color: Colors.grey[600],
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: devices.length,
+                      separatorBuilder: (context, index) =>
+                          SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final device = devices[index];
+                        final isConnected =
+                            printerService.connectedPrinter.value?.macAdress ==
+                            device.macAdress;
+
+                        return Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: isConnected
+                                  ? Colors.green
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              await printerService.connectPrinter(
+                                device.macAdress,
+                              );
+                              Get.back();
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(isMobile ? 12 : 16),
+                              child: Row(
+                                children: [
+                                  // Printer Icon
+                                  Container(
+                                    padding: EdgeInsets.all(isMobile ? 10 : 12),
+                                    decoration: BoxDecoration(
+                                      color: isConnected
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      Iconsax.printer,
+                                      color: isConnected
+                                          ? Colors.green
+                                          : Colors.blue,
+                                      size: isMobile ? 20 : 24,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  // Printer Info
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                device.name,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: isMobile ? 14 : 16,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (isConnected)
+                                              Container(
+                                                margin: EdgeInsets.only(
+                                                  left: 8,
+                                                ),
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  'Connected',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          device.macAdress,
+                                          style: TextStyle(
+                                            fontSize: isMobile ? 11 : 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Connect Button
+                                  if (!isMobile) SizedBox(width: 8),
+                                  if (!isMobile)
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        await printerService.connectPrinter(
+                                          device.macAdress,
+                                        );
+                                        Get.back();
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isConnected
+                                            ? Colors.green
+                                            : Colors.blue,
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isConnected ? 'Connected' : 'Connect',
+                                      ),
+                                    ),
+                                  if (isMobile)
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.grey[400],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ),
+              // Footer Actions
+              Container(
+                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(16),
+                  ),
+                ),
+                child: isMobile
+                    ? Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  printerService.listBluetoothPrinters(),
+                              icon: Icon(Iconsax.refresh, size: 18),
+                              label: Text('Scan Again'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton(
+                              onPressed: () => Get.back(),
+                              child: Text('Cancel'),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Get.back(),
+                            child: Text('Cancel'),
+                          ),
+                          SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () =>
+                                printerService.listBluetoothPrinters(),
+                            icon: Icon(Iconsax.refresh, size: 18),
+                            label: Text('Scan Again'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildCashierSection(AuthController authController, bool isDark) {
-    return _buildSectionCard(
-      title: 'Cashier Management',
-      icon: Iconsax.people,
-      iconColor: Colors.purple,
-      isDark: isDark,
-      trailing: IconButton(
-        icon: Icon(
-          Iconsax.add_circle,
-          color: isDark ? AppColors.darkPrimary : AppColors.primary,
-        ),
-        onPressed: () => _showAddCashierDialog(authController, isDark),
-        tooltip: 'Add Cashier',
-      ),
-      children: [
-        Obx(
-          () => ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: authController.cashiers.length,
-            itemBuilder: (context, index) {
-              final cashier = authController.cashiers[index];
-              return Card(
-                color: AppColors.getSurfaceColor(isDark),
-                elevation: isDark ? 4 : 1,
-                margin: EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getRoleColor(
-                      cashier.role,
-                    ).withValues(alpha: 0.2),
-                    child: Icon(
-                      Iconsax.user,
-                      color: _getRoleColor(cashier.role),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        return _buildSectionCard(
+          title: 'Cashier Management',
+          icon: Iconsax.people,
+          iconColor: Colors.purple,
+          isDark: isDark,
+          trailing: IconButton(
+            icon: Icon(
+              Iconsax.add_circle,
+              color: isDark ? AppColors.darkPrimary : AppColors.primary,
+            ),
+            onPressed: () => _showAddCashierDialog(authController, isDark),
+            tooltip: 'Add Cashier',
+          ),
+          children: [
+            Obx(() {
+              if (authController.isLoading.value) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (authController.cashiers.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Iconsax.user_search,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No cashiers found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  title: Text(
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: authController.cashiers.length,
+                separatorBuilder: (context, index) => SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final cashier = authController.cashiers[index];
+                  return Card(
+                    color: AppColors.getSurfaceColor(isDark),
+                    elevation: isDark ? 4 : 1,
+                    margin: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: isMobile
+                          ? () => _showCashierOptionsSheet(
+                              authController,
+                              cashier,
+                              isDark,
+                            )
+                          : null,
+                      child: Padding(
+                        padding: EdgeInsets.all(isMobile ? 12 : 16),
+                        child: isMobile
+                            ? _buildMobileCashierCard(
+                                cashier,
+                                authController,
+                                isDark,
+                              )
+                            : _buildDesktopCashierCard(
+                                cashier,
+                                authController,
+                                isDark,
+                              ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMobileCashierCard(
+    CashierModel cashier,
+    AuthController authController,
+    bool isDark,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: _getRoleColor(
+                cashier.role,
+              ).withValues(alpha: 0.2),
+              child: Icon(
+                Iconsax.user,
+                color: _getRoleColor(cashier.role),
+                size: 20,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     cashier.name,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
+                      fontSize: 15,
                       color: AppColors.getTextPrimary(isDark),
                     ),
                   ),
-                  subtitle: Text(
-                    cashier.role.name.toUpperCase(),
-                    style: TextStyle(color: AppColors.getTextSecondary(isDark)),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  SizedBox(height: 4),
+                  Row(
                     children: [
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getRoleColor(
+                            cashier.role,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          cashier.role.displayName,
+                          style: TextStyle(
+                            color: _getRoleColor(cashier.role),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
                         ),
                         decoration: BoxDecoration(
                           color: cashier.isActive
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Colors.grey.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                              ? Colors.green.withValues(alpha: 0.15)
+                              : Colors.grey.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           cashier.isActive ? 'Active' : 'Inactive',
@@ -1001,73 +1356,203 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                             color: cashier.isActive
                                 ? Colors.green[700]
                                 : Colors.grey[600],
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
-                      PopupMenuButton(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: AppColors.getTextSecondary(isDark),
-                        ),
-                        color: AppColors.getSurfaceColor(isDark),
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Iconsax.edit,
-                                  size: 18,
-                                  color: AppColors.getTextSecondary(isDark),
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Edit',
-                                  style: TextStyle(
-                                    color: AppColors.getTextPrimary(isDark),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: () => Future.delayed(
-                              Duration.zero,
-                              () => _showEditCashierDialog(
-                                authController,
-                                cashier,
-                                isDark,
-                              ),
-                            ),
-                          ),
-                          PopupMenuItem(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Iconsax.trash,
-                                  size: 18,
-                                  color: Colors.red,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Delete',
-                                  style: TextStyle(color: Colors.red),
-                                ),
-                              ],
-                            ),
-                            onTap: () =>
-                                authController.deleteCashier(cashier.id),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+          ],
+        ),
+        if (cashier.email.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(left: 60, top: 8),
+            child: Text(
+              cashier.email,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.getTextSecondary(isDark),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopCashierCard(
+    CashierModel cashier,
+    AuthController authController,
+    bool isDark,
+  ) {
+    return Row(
+      children: [
+        CircleAvatar(
+          backgroundColor: _getRoleColor(cashier.role).withValues(alpha: 0.2),
+          child: Icon(Iconsax.user, color: _getRoleColor(cashier.role)),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                cashier.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.getTextPrimary(isDark),
                 ),
-              );
-            },
+              ),
+              Text(
+                cashier.role.displayName.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.getTextSecondary(isDark),
+                ),
+              ),
+            ],
           ),
         ),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: cashier.isActive
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            cashier.isActive ? 'Active' : 'Inactive',
+            style: TextStyle(
+              color: cashier.isActive ? Colors.green[700] : Colors.grey[600],
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        SizedBox(width: 8),
+        PopupMenuButton(
+          icon: Icon(
+            Icons.more_vert,
+            color: AppColors.getTextSecondary(isDark),
+          ),
+          color: AppColors.getSurfaceColor(isDark),
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              child: Row(
+                children: [
+                  Icon(
+                    Iconsax.edit,
+                    size: 18,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Edit',
+                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                  ),
+                ],
+              ),
+              onTap: () => Future.delayed(
+                Duration.zero,
+                () => _showEditCashierDialog(authController, cashier, isDark),
+              ),
+            ),
+            PopupMenuItem(
+              child: Row(
+                children: [
+                  Icon(Iconsax.trash, size: 18, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+              onTap: () => authController.deleteCashier(cashier.id),
+            ),
+          ],
+        ),
       ],
+    );
+  }
+
+  void _showCashierOptionsSheet(
+    AuthController authController,
+    CashierModel cashier,
+    bool isDark,
+  ) {
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: AppColors.getSurfaceColor(isDark),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            SizedBox(height: 20),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _getRoleColor(
+                  cashier.role,
+                ).withValues(alpha: 0.2),
+                child: Icon(Iconsax.user, color: _getRoleColor(cashier.role)),
+              ),
+              title: Text(
+                cashier.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.getTextPrimary(isDark),
+                ),
+              ),
+              subtitle: Text(
+                cashier.role.displayName,
+                style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+              ),
+            ),
+            SizedBox(height: 16),
+            Divider(height: 1),
+            ListTile(
+              leading: Icon(Iconsax.edit, color: Colors.blue),
+              title: Text('Edit Cashier'),
+              onTap: () {
+                Get.back();
+                _showEditCashierDialog(authController, cashier, isDark);
+              },
+            ),
+            ListTile(
+              leading: Icon(Iconsax.trash, color: Colors.red),
+              title: Text(
+                'Delete Cashier',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Get.back();
+                authController.deleteCashier(cashier.id);
+              },
+            ),
+            SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Get.back(),
+                child: Text('Cancel'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1153,205 +1638,289 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
       Dialog(
         backgroundColor: AppColors.getSurfaceColor(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 450,
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color:
-                          (isDark ? AppColors.darkPrimary : AppColors.primary)
-                              .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Iconsax.user_add,
-                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Add New Cashier',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.getTextPrimary(isDark),
-                    ),
-                  ),
-                ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            final dialogWidth = isMobile
+                ? MediaQuery.of(context).size.width * 0.9
+                : 450.0;
+
+            return Container(
+              width: dialogWidth,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
-              SizedBox(height: 24),
-              TextField(
-                controller: nameController,
-                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                decoration: InputDecoration(
-                  labelText: 'Full Name',
-                  labelStyle: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  prefixIcon: Icon(
-                    Iconsax.user,
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkSurfaceVariant
-                      : Colors.grey[50],
+              padding: EdgeInsets.all(isMobile ? 20 : 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color:
+                                (isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.primary)
+                                    .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Iconsax.user_add,
+                            color: isDark
+                                ? AppColors.darkPrimary
+                                : AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Add New Cashier',
+                            style: TextStyle(
+                              fontSize: isMobile ? 18 : 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.getTextPrimary(isDark),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 24),
+                    TextField(
+                      controller: nameController,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      decoration: InputDecoration(
+                        labelText: 'Full Name',
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.user,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: pinController,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      decoration: InputDecoration(
+                        labelText: 'PIN (4 digits)',
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.lock,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
+                      ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                    ),
+                    SizedBox(height: 16),
+                    StatefulBuilder(
+                      builder: (context, setState) {
+                        return DropdownButtonFormField<UserRole>(
+                          value: selectedRole,
+                          style: TextStyle(
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                          dropdownColor: AppColors.getSurfaceColor(isDark),
+                          decoration: InputDecoration(
+                            labelText: 'Role',
+                            labelStyle: TextStyle(
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            prefixIcon: Icon(
+                              Iconsax.user_tag,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurfaceVariant
+                                : Colors.grey[50],
+                          ),
+                          items: UserRole.values.map((role) {
+                            return DropdownMenuItem(
+                              value: role,
+                              child: Text(role.displayName),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => selectedRole = value);
+                            }
+                          },
+                        );
+                      },
+                    ),
+                    SizedBox(height: 24),
+                    isMobile
+                        ? Column(
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    if (nameController.text.isNotEmpty &&
+                                        pinController.text.length == 4) {
+                                      final newCashier = CashierModel(
+                                        id: DateTime.now()
+                                            .millisecondsSinceEpoch
+                                            .toString(),
+                                        name: nameController.text,
+                                        email:
+                                            '${nameController.text.toLowerCase().replaceAll(' ', '.')}@pos.local',
+                                        pin: pinController.text,
+                                        role: selectedRole,
+                                        isActive: true,
+                                        createdAt: DateTime.now(),
+                                      );
+                                      authController.addCashier(newCashier);
+                                      Get.back();
+                                    } else {
+                                      Get.snackbar(
+                                        'Error',
+                                        'Please fill all fields correctly',
+                                        backgroundColor: Colors.red,
+                                        colorText: Colors.white,
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                  child: Text('Add Cashier'),
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: TextButton(
+                                  onPressed: () => Get.back(),
+                                  child: Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (nameController.text.isNotEmpty &&
+                                      pinController.text.length == 4) {
+                                    final newCashier = CashierModel(
+                                      id: DateTime.now().millisecondsSinceEpoch
+                                          .toString(),
+                                      name: nameController.text,
+                                      email:
+                                          '${nameController.text.toLowerCase().replaceAll(' ', '.')}@pos.local',
+                                      pin: pinController.text,
+                                      role: selectedRole,
+                                      isActive: true,
+                                      createdAt: DateTime.now(),
+                                    );
+                                    authController.addCashier(newCashier);
+                                    Get.back();
+                                  } else {
+                                    Get.snackbar(
+                                      'Error',
+                                      'Please fill all fields correctly',
+                                      backgroundColor: Colors.red,
+                                      colorText: Colors.white,
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: Text('Add Cashier'),
+                              ),
+                            ],
+                          ),
+                  ],
                 ),
               ),
-              SizedBox(height: 16),
-              TextField(
-                controller: pinController,
-                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                decoration: InputDecoration(
-                  labelText: 'PIN (4 digits)',
-                  labelStyle: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  prefixIcon: Icon(
-                    Iconsax.lock,
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkSurfaceVariant
-                      : Colors.grey[50],
-                ),
-                keyboardType: TextInputType.number,
-                maxLength: 4,
-              ),
-              SizedBox(height: 16),
-              StatefulBuilder(
-                builder: (context, setState) {
-                  return DropdownButtonFormField<UserRole>(
-                    value: selectedRole,
-                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                    dropdownColor: AppColors.getSurfaceColor(isDark),
-                    decoration: InputDecoration(
-                      labelText: 'Role',
-                      labelStyle: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                      prefixIcon: Icon(
-                        Iconsax.user_tag,
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : Colors.grey[50],
-                    ),
-                    items: UserRole.values.map((role) {
-                      return DropdownMenuItem(
-                        value: role,
-                        child: Text(role.name.toUpperCase()),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => selectedRole = value);
-                      }
-                    },
-                  );
-                },
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(
-                        color: isDark
-                            ? AppColors.darkPrimary
-                            : AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (nameController.text.isNotEmpty &&
-                          pinController.text.length == 4) {
-                        final newCashier = CashierModel(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          name: nameController.text,
-                          email:
-                              '${nameController.text.toLowerCase().replaceAll(' ', '.')}@pos.local',
-                          pin: pinController.text,
-                          role: selectedRole,
-                          isActive: true,
-                          createdAt: DateTime.now(),
-                        );
-                        authController.addCashier(newCashier);
-                        Get.back();
-                        Get.snackbar(
-                          'Success',
-                          'Cashier added successfully',
-                          backgroundColor: Colors.green,
-                          colorText: Colors.white,
-                        );
-                      } else {
-                        Get.snackbar(
-                          'Error',
-                          'Please fill all fields correctly',
-                          backgroundColor: Colors.red,
-                          colorText: Colors.white,
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? AppColors.darkPrimary
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: Text('Add Cashier'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -1370,191 +1939,258 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
       Dialog(
         backgroundColor: AppColors.getSurfaceColor(isDark),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            return Container(
-              width: 450,
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color:
-                              (isDark
-                                      ? AppColors.darkPrimary
-                                      : AppColors.primary)
-                                  .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Iconsax.edit,
-                          color: isDark
-                              ? AppColors.darkPrimary
-                              : AppColors.primary,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Edit Cashier',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.getTextPrimary(isDark),
-                        ),
-                      ),
-                    ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            final dialogWidth = isMobile
+                ? MediaQuery.of(context).size.width * 0.9
+                : 450.0;
+
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return Container(
+                  width: dialogWidth,
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.85,
                   ),
-                  SizedBox(height: 24),
-                  TextField(
-                    controller: nameController,
-                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                    decoration: InputDecoration(
-                      labelText: 'Full Name',
-                      labelStyle: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                      prefixIcon: Icon(
-                        Iconsax.user,
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
+                  padding: EdgeInsets.all(isMobile ? 20 : 24),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color:
+                                    (isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary)
+                                        .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Iconsax.edit,
+                                color: isDark
+                                    ? AppColors.darkPrimary
+                                    : AppColors.primary,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Edit Cashier',
+                                style: TextStyle(
+                                  fontSize: isMobile ? 18 : 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.getTextPrimary(isDark),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : Colors.grey[50],
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  DropdownButtonFormField<UserRole>(
-                    value: selectedRole,
-                    style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                    dropdownColor: AppColors.getSurfaceColor(isDark),
-                    decoration: InputDecoration(
-                      labelText: 'Role',
-                      labelStyle: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                      prefixIcon: Icon(
-                        Iconsax.user_tag,
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.getDivider(isDark),
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : Colors.grey[50],
-                    ),
-                    items: UserRole.values.map((role) {
-                      return DropdownMenuItem(
-                        value: role,
-                        child: Text(role.name.toUpperCase()),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => selectedRole = value);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  SwitchListTile(
-                    title: Text(
-                      'Active Status',
-                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                    ),
-                    subtitle: Text(
-                      isActive
-                          ? 'This cashier can log in'
-                          : 'This cashier cannot log in',
-                      style: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
-                      ),
-                    ),
-                    value: isActive,
-                    onChanged: (value) {
-                      setState(() => isActive = value);
-                    },
-                    activeColor: isDark
-                        ? AppColors.darkPrimary
-                        : AppColors.primary,
-                  ),
-                  SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Get.back(),
-                        child: Text(
-                          'Cancel',
+                        SizedBox(height: 24),
+                        TextField(
+                          controller: nameController,
                           style: TextStyle(
-                            color: isDark
-                                ? AppColors.darkPrimary
-                                : AppColors.primary,
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Full Name',
+                            labelStyle: TextStyle(
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            prefixIcon: Icon(
+                              Iconsax.user,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurfaceVariant
+                                : Colors.grey[50],
                           ),
                         ),
-                      ),
-                      SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (nameController.text.isNotEmpty) {
-                            final updatedCashier = cashier.copyWith(
-                              name: nameController.text,
-                              role: selectedRole,
-                              isActive: isActive,
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<UserRole>(
+                          value: selectedRole,
+                          style: TextStyle(
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                          dropdownColor: AppColors.getSurfaceColor(isDark),
+                          decoration: InputDecoration(
+                            labelText: 'Role',
+                            labelStyle: TextStyle(
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            prefixIcon: Icon(
+                              Iconsax.user_tag,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.getDivider(isDark),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? AppColors.darkSurfaceVariant
+                                : Colors.grey[50],
+                          ),
+                          items: UserRole.values.map((role) {
+                            return DropdownMenuItem(
+                              value: role,
+                              child: Text(role.displayName.toUpperCase()),
                             );
-                            authController.updateCashier(updatedCashier);
-                            Get.back();
-                            Get.snackbar(
-                              'Success',
-                              'Cashier updated successfully',
-                              backgroundColor: Colors.green,
-                              colorText: Colors.white,
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDark
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => selectedRole = value);
+                            }
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        SwitchListTile(
+                          title: Text(
+                            'Active Status',
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(isDark),
+                            ),
+                          ),
+                          subtitle: Text(
+                            isActive
+                                ? 'This cashier can log in'
+                                : 'This cashier cannot log in',
+                            style: TextStyle(
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                          ),
+                          value: isActive,
+                          onChanged: (value) {
+                            setState(() => isActive = value);
+                          },
+                          activeColor: isDark
                               ? AppColors.darkPrimary
                               : AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
                         ),
-                        child: Text('Save Changes'),
-                      ),
-                    ],
+                        SizedBox(height: 24),
+                        isMobile
+                            ? Column(
+                                children: [
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        if (nameController.text.isNotEmpty) {
+                                          final updatedCashier = cashier
+                                              .copyWith(
+                                                name: nameController.text,
+                                                role: selectedRole,
+                                                isActive: isActive,
+                                              );
+                                          authController.updateCashier(
+                                            updatedCashier,
+                                          );
+                                          Get.back();
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                      ),
+                                      child: Text('Save Changes'),
+                                    ),
+                                  ),
+                                  SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: TextButton(
+                                      onPressed: () => Get.back(),
+                                      child: Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? AppColors.darkPrimary
+                                              : AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton(
+                                    onPressed: () => Get.back(),
+                                    child: Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      if (nameController.text.isNotEmpty) {
+                                        final updatedCashier = cashier.copyWith(
+                                          name: nameController.text,
+                                          role: selectedRole,
+                                          isActive: isActive,
+                                        );
+                                        authController.updateCashier(
+                                          updatedCashier,
+                                        );
+                                        Get.back();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: isDark
+                                          ? AppColors.darkPrimary
+                                          : AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    child: Text('Save Changes'),
+                                  ),
+                                ],
+                              ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         ),

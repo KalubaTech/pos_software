@@ -6,6 +6,7 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import '../models/receipt_model.dart';
 import '../utils/currency_formatter.dart';
 import '../controllers/business_settings_controller.dart';
+import '../services/bluetooth_permission_service.dart';
 import 'package:intl/intl.dart';
 
 class PrinterService extends GetxController {
@@ -123,6 +124,19 @@ class PrinterService extends GetxController {
   // List paired Bluetooth printers (without auto-reconnection)
   Future<List<BluetoothInfo>> listBluetoothPrinters() async {
     try {
+      // Check Bluetooth permissions first
+      final bluetoothService = Get.find<BluetoothPermissionService>();
+      final hasPermission = await bluetoothService.checkBluetoothForPrinter();
+
+      if (!hasPermission) {
+        Get.snackbar(
+          'Permission Required',
+          'Bluetooth permissions are needed to scan for printers',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return [];
+      }
+
       isScanning.value = true;
       final List<BluetoothInfo> listResult =
           await PrintBluetoothThermal.pairedBluetooths;
@@ -141,6 +155,18 @@ class PrinterService extends GetxController {
       }
 
       return listResult;
+    } on Exception catch (e) {
+      print('Error listing Bluetooth printers: $e');
+
+      // Check if it's a Bluetooth disabled error
+      if (e.toString().contains('bluetooth') ||
+          e.toString().contains('Bluetooth')) {
+        final bluetoothService = Get.find<BluetoothPermissionService>();
+        await bluetoothService.showBluetoothEnableDialog();
+      } else {
+        Get.snackbar('Error', 'Failed to list printers: $e');
+      }
+      return [];
     } catch (e) {
       print('Error listing Bluetooth printers: $e');
       Get.snackbar('Error', 'Failed to list printers: $e');

@@ -10,7 +10,7 @@ class AppearanceController extends GetxController {
   final isDarkMode = false.obs;
 
   // Primary Color
-  final primaryColor = 0xFF6200EE.obs; // Material Purple
+  final primaryColor = 0xFF009688.obs; // Material Teal
 
   // Font Settings
   final fontSize = 'medium'.obs; // small, medium, large
@@ -37,12 +37,22 @@ class AppearanceController extends GetxController {
   void onInit() {
     super.onInit();
     loadSettings();
+    // Force teal color for existing purple users (migration)
+    _migrateToPurpleToTeal();
+  }
+
+  void _migrateToPurpleToTeal() {
+    // If user has the old purple default, update to teal
+    if (primaryColor.value == 0xFF6200EE) {
+      primaryColor.value = 0xFF009688;
+      saveSettings();
+    }
   }
 
   void loadSettings() {
     themeMode.value = _storage.read('theme_mode') ?? 'light';
     isDarkMode.value = themeMode.value == 'dark';
-    primaryColor.value = _storage.read('primary_color') ?? 0xFF6200EE;
+    primaryColor.value = _storage.read('primary_color') ?? 0xFF009688;
     fontSize.value = _storage.read('font_size') ?? 'medium';
     fontFamily.value = _storage.read('font_family') ?? 'default';
     compactMode.value = _storage.read('compact_mode') ?? false;
@@ -94,7 +104,7 @@ class AppearanceController extends GetxController {
   void resetToDefaults() {
     themeMode.value = 'light';
     isDarkMode.value = false;
-    primaryColor.value = 0xFF6200EE;
+    primaryColor.value = 0xFF009688;
     fontSize.value = 'medium';
     fontFamily.value = 'default';
     compactMode.value = false;

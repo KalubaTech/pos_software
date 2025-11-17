@@ -204,11 +204,11 @@ Professional Point of Sale system for retail businesses. Manage sales, inventory
 1. POS system
 2. point of sale
 3. retail software
-4. inventory
+4. inventory 
 5. cash register
-6. receipt printer
+6. receipt printer 
 7. sales tracking
-```
+``` 
 
 ---
 

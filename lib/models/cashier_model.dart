@@ -1,17 +1,6 @@
 enum UserRole { admin, cashier, manager }
 
 extension UserRoleExtension on UserRole {
-  String get name {
-    switch (this) {
-      case UserRole.admin:
-        return 'admin';
-      case UserRole.cashier:
-        return 'cashier';
-      case UserRole.manager:
-        return 'manager';
-    }
-  }
-
   String get displayName {
     switch (this) {
       case UserRole.admin:

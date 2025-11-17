@@ -332,7 +332,7 @@ class _LoginViewState extends State<LoginView> {
             ),
           ),
           SizedBox(height: 16),
-          Obx(() {
+          /*    Obx(() {
             return Wrap(
               spacing: 16,
               runSpacing: 16,
@@ -342,7 +342,7 @@ class _LoginViewState extends State<LoginView> {
                   .map((cashier) => _buildQuickLoginCard(cashier, isDark))
                   .toList(),
             );
-          }),
+          }),*/
           SizedBox(height: 16),
           Text(
             'Demo PINs: Admin (1234), John (1111), Sarah (2222), Mike (3333)',
@@ -410,7 +410,7 @@ class _LoginViewState extends State<LoginView> {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              cashier.role.name.toUpperCase(),
+              cashier.role.displayName.toUpperCase(),
               style: TextStyle(
                 color: isDark
                     ? AppColors.darkTextSecondary

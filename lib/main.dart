@@ -14,10 +14,13 @@ import 'controllers/appearance_controller.dart';
 import 'controllers/price_tag_designer_controller.dart';
 import 'controllers/product_controller.dart';
 import 'controllers/printer_controller.dart';
+import 'controllers/wallet_controller.dart';
 import 'services/printer_service.dart';
 import 'services/barcode_scanner_service.dart';
+import 'services/bluetooth_permission_service.dart';
 import 'services/image_storage_service.dart';
 import 'services/database_service.dart';
+import 'services/wallet_database_service.dart';
 import 'views/auth/login_view.dart';
 import 'package:get/get.dart';
 
@@ -28,6 +31,14 @@ void main() async {
   // Initialize DatabaseService first
   final dbService = Get.put(DatabaseService());
   await dbService.database; // Ensure database is initialized
+
+  // Initialize Wallet services with shared database
+  final walletDbService = Get.put(
+    WalletDatabaseService(await dbService.database),
+  );
+  await walletDbService.initializeTables();
+  Get.put(WalletController(walletDbService));
+
   Get.put(ProductController());
   Get.put(NavigationsController());
   Get.put(AuthController());
@@ -46,6 +57,7 @@ void main() async {
   }
 
   Get.put(BarcodeScannerService());
+  Get.put(BluetoothPermissionService());
 
   runApp(const MyApp());
 }
@@ -83,6 +95,65 @@ class MyApp extends StatelessWidget {
     bool isDark,
     double fontMultiplier,
   ) {
+    // Get the base text theme and apply Google Fonts
+    final baseTextTheme = isDark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
+
+    // Apply Google Fonts without using .apply() to avoid null fontSize issues
+    var textTheme = GoogleFonts.interTextTheme(baseTextTheme);
+
+    // Manually scale font sizes if multiplier is not 1.0
+    if (fontMultiplier != 1.0) {
+      textTheme = TextTheme(
+        displayLarge: textTheme.displayLarge?.copyWith(
+          fontSize: (textTheme.displayLarge?.fontSize ?? 57) * fontMultiplier,
+        ),
+        displayMedium: textTheme.displayMedium?.copyWith(
+          fontSize: (textTheme.displayMedium?.fontSize ?? 45) * fontMultiplier,
+        ),
+        displaySmall: textTheme.displaySmall?.copyWith(
+          fontSize: (textTheme.displaySmall?.fontSize ?? 36) * fontMultiplier,
+        ),
+        headlineLarge: textTheme.headlineLarge?.copyWith(
+          fontSize: (textTheme.headlineLarge?.fontSize ?? 32) * fontMultiplier,
+        ),
+        headlineMedium: textTheme.headlineMedium?.copyWith(
+          fontSize: (textTheme.headlineMedium?.fontSize ?? 28) * fontMultiplier,
+        ),
+        headlineSmall: textTheme.headlineSmall?.copyWith(
+          fontSize: (textTheme.headlineSmall?.fontSize ?? 24) * fontMultiplier,
+        ),
+        titleLarge: textTheme.titleLarge?.copyWith(
+          fontSize: (textTheme.titleLarge?.fontSize ?? 22) * fontMultiplier,
+        ),
+        titleMedium: textTheme.titleMedium?.copyWith(
+          fontSize: (textTheme.titleMedium?.fontSize ?? 16) * fontMultiplier,
+        ),
+        titleSmall: textTheme.titleSmall?.copyWith(
+          fontSize: (textTheme.titleSmall?.fontSize ?? 14) * fontMultiplier,
+        ),
+        bodyLarge: textTheme.bodyLarge?.copyWith(
+          fontSize: (textTheme.bodyLarge?.fontSize ?? 16) * fontMultiplier,
+        ),
+        bodyMedium: textTheme.bodyMedium?.copyWith(
+          fontSize: (textTheme.bodyMedium?.fontSize ?? 14) * fontMultiplier,
+        ),
+        bodySmall: textTheme.bodySmall?.copyWith(
+          fontSize: (textTheme.bodySmall?.fontSize ?? 12) * fontMultiplier,
+        ),
+        labelLarge: textTheme.labelLarge?.copyWith(
+          fontSize: (textTheme.labelLarge?.fontSize ?? 14) * fontMultiplier,
+        ),
+        labelMedium: textTheme.labelMedium?.copyWith(
+          fontSize: (textTheme.labelMedium?.fontSize ?? 12) * fontMultiplier,
+        ),
+        labelSmall: textTheme.labelSmall?.copyWith(
+          fontSize: (textTheme.labelSmall?.fontSize ?? 11) * fontMultiplier,
+        ),
+      );
+    }
+
     return ThemeData(
       useMaterial3: true,
       brightness: isDark ? Brightness.dark : Brightness.light,
@@ -91,11 +162,7 @@ class MyApp extends StatelessWidget {
         primary: primaryColor,
         brightness: isDark ? Brightness.dark : Brightness.light,
       ),
-      textTheme: GoogleFonts.interTextTheme().apply(
-        bodyColor: isDark ? Colors.white : Colors.black,
-        displayColor: isDark ? Colors.white : Colors.black,
-        fontSizeFactor: fontMultiplier,
-      ),
+      textTheme: textTheme,
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           foregroundColor: Colors.white,
