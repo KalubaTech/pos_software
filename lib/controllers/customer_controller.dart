@@ -1,9 +1,11 @@
 import 'package:get/get.dart';
 import '../models/client_model.dart';
 import '../services/database_service.dart';
+import 'universal_sync_controller.dart';
 
 class CustomerController extends GetxController {
   final DatabaseService _dbService = Get.find<DatabaseService>();
+  UniversalSyncController? _syncController;
 
   var customers = <ClientModel>[].obs;
   var filteredCustomers = <ClientModel>[].obs;
@@ -12,6 +14,13 @@ class CustomerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Try to get universal sync controller
+    try {
+      _syncController = Get.find<UniversalSyncController>();
+      print('✅ CustomerController: Universal sync connected');
+    } catch (e) {
+      print('⚠️ CustomerController: Sync not available yet');
+    }
     fetchCustomers();
   }
 
@@ -48,6 +57,10 @@ class CustomerController extends GetxController {
       final id = await _dbService.insertCustomer(customer);
       if (id > 0) {
         await fetchCustomers();
+
+        // Sync to cloud via UniversalSyncController
+        _syncController?.syncCustomer(customer);
+
         Get.snackbar('Success', 'Customer added successfully');
         return true;
       }
@@ -63,6 +76,10 @@ class CustomerController extends GetxController {
       final count = await _dbService.updateCustomer(customer);
       if (count > 0) {
         await fetchCustomers();
+
+        // Sync to cloud via UniversalSyncController
+        _syncController?.syncCustomer(customer);
+
         Get.snackbar('Success', 'Customer updated successfully');
         return true;
       }
@@ -78,6 +95,10 @@ class CustomerController extends GetxController {
       final count = await _dbService.deleteCustomer(id);
       if (count > 0) {
         await fetchCustomers();
+
+        // Sync deletion to cloud via UniversalSyncController
+        _syncController?.deleteCustomerFromCloud(id);
+
         Get.snackbar('Success', 'Customer deleted successfully');
         return true;
       }

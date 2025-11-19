@@ -984,7 +984,7 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                         size: context.isMobile ? 12 : 18,
                       ),
                       SizedBox(width: context.isMobile ? 10 : 15),
-                      Expanded( 
+                      Expanded(
                         child: Text(
                           feature,
                           style: TextStyle(

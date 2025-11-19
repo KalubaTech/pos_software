@@ -183,55 +183,60 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        variant.name,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.getTextPrimary(
-                                            isDark,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              (isDark
-                                                      ? AppColors.darkPrimary
-                                                      : AppColors.primary)
-                                                  .withValues(
-                                                    alpha: isDark ? 0.2 : 0.1,
-                                                  ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
+                                      Expanded(
                                         child: Text(
-                                          variant.attributeType,
+                                          variant.name,
                                           style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark
-                                                ? AppColors.darkPrimary
-                                                : AppColors.primary,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.w600,
+                                            color: AppColors.getTextPrimary(
+                                              isDark,
+                                            ),
                                           ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
                                       ),
                                     ],
                                   ),
+                                  SizedBox(height: 2),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (isDark
+                                                  ? AppColors.darkPrimary
+                                                  : AppColors.primary)
+                                              .withValues(
+                                                alpha: isDark ? 0.2 : 0.1,
+                                              ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      variant.attributeType,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                   SizedBox(height: 4),
-                                  Row(
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 2,
                                     children: [
                                       if (variant.sku != null)
                                         Text(
                                           'SKU: ${variant.sku}',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: 11,
                                             color: AppColors.getTextSecondary(
                                               isDark,
                                             ),
@@ -239,8 +244,9 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                         ),
                                       if (variant.sku != null)
                                         Text(
-                                          ' • ',
+                                          '•',
                                           style: TextStyle(
+                                            fontSize: 11,
                                             color: AppColors.getTextSecondary(
                                               isDark,
                                             ),
@@ -249,7 +255,7 @@ class _VariantSelectionDialogState extends State<VariantSelectionDialog> {
                                       Text(
                                         'Stock: ${variant.stock}',
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11,
                                           color: isOutOfStock
                                               ? Colors.red
                                               : AppColors.getTextSecondary(

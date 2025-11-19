@@ -9,6 +9,7 @@ import '../../models/product_model.dart';
 import '../../utils/colors.dart';
 import '../../services/image_storage_service.dart';
 import '../../components/widgets/local_image_widget.dart';
+import '../../components/widgets/image_upload_progress_indicator.dart';
 
 class AddProductDialog extends StatefulWidget {
   final ProductModel? product;
@@ -149,33 +150,39 @@ class _AddProductDialogState extends State<AddProductDialog> {
         insetPadding: isMobile
             ? EdgeInsets.all(16)
             : EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-        child: Container(
-          width: isMobile ? double.infinity : 900,
-          height: isMobile ? null : 700,
-          constraints: isMobile
-              ? BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.92,
-                )
-              : null,
-          child: Column(
-            children: [
-              _buildHeader(isEdit, isDark, isMobile),
-              if (!isMobile) ...[
-                Expanded(
-                  child: Row(
-                    children: [
-                      _buildStepper(isDark),
-                      Expanded(child: _buildStepContent(isDark, isMobile)),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                _buildMobileStepIndicator(isDark),
-                Expanded(child: _buildStepContent(isDark, isMobile)),
-              ],
-              _buildFooter(isEdit, isDark, isMobile),
-            ],
-          ),
+        child: Stack(
+          children: [
+            Container(
+              width: isMobile ? double.infinity : 900,
+              height: isMobile ? null : 700,
+              constraints: isMobile
+                  ? BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.92,
+                    )
+                  : null,
+              child: Column(
+                children: [
+                  _buildHeader(isEdit, isDark, isMobile),
+                  if (!isMobile) ...[
+                    Expanded(
+                      child: Row(
+                        children: [
+                          _buildStepper(isDark),
+                          Expanded(child: _buildStepContent(isDark, isMobile)),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    _buildMobileStepIndicator(isDark),
+                    Expanded(child: _buildStepContent(isDark, isMobile)),
+                  ],
+                  _buildFooter(isEdit, isDark, isMobile),
+                ],
+              ),
+            ),
+            // Upload progress indicator overlay
+            ImageUploadOverlay(),
+          ],
         ),
       ),
     );
@@ -291,7 +298,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    overflow: TextOverflow.ellipsis
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
@@ -440,13 +447,11 @@ class _AddProductDialogState extends State<AddProductDialog> {
               child: DropdownButtonFormField<String>(
                 isExpanded: true,
                 value: _selectedCategory,
-                style: TextStyle(
-                  overflow: TextOverflow.ellipsis,
-                ),
+                style: TextStyle(overflow: TextOverflow.ellipsis),
                 decoration: InputDecoration(
                   labelText: 'Category *',
                   labelStyle: TextStyle(overflow: TextOverflow.ellipsis),
-                  prefixIcon: Icon(Iconsax.category, size: 16,),
+                  prefixIcon: Icon(Iconsax.category, size: 16),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -465,8 +470,10 @@ class _AddProductDialogState extends State<AddProductDialog> {
                           'Other',
                         ]
                         .map(
-                          (cat) =>
-                              DropdownMenuItem(value: cat, child: Text(cat, overflow: TextOverflow.ellipsis)),
+                          (cat) => DropdownMenuItem(
+                            value: cat,
+                            child: Text(cat, overflow: TextOverflow.ellipsis),
+                          ),
                         )
                         .toList(),
                 onChanged: (value) {
@@ -1531,9 +1538,15 @@ class _AddProductDialogState extends State<AddProductDialog> {
     );
   }
 
-  void _saveProduct() {
+  void _saveProduct() async {
     if (_formKey.currentState?.validate() ?? false) {
       final controller = Get.find<ProductController>();
+
+      // Show loading dialog
+      Get.dialog(
+        Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
 
       final product = ProductModel(
         id:
@@ -1560,22 +1573,34 @@ class _AddProductDialogState extends State<AddProductDialog> {
         lastRestocked: DateTime.now(),
       );
 
-      if (widget.product != null) {
-        controller.updateProduct(product);
-        Get.back();
+      try {
+        if (widget.product != null) {
+          await controller.updateProduct(product);
+          Get.back(); // Close loading
+          Get.back(); // Close dialog
+          Get.snackbar(
+            'Success',
+            'Product updated successfully',
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        } else {
+          await controller.addProduct(product);
+          Get.back(); // Close loading
+          Get.back(); // Close dialog
+          Get.snackbar(
+            'Success',
+            'Product added successfully',
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        }
+      } catch (e) {
+        Get.back(); // Close loading
         Get.snackbar(
-          'Success',
-          'Product updated successfully',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-      } else {
-        controller.addProduct(product);
-        Get.back();
-        Get.snackbar(
-          'Success',
-          'Product added successfully',
-          backgroundColor: Colors.green,
+          'Error',
+          'Failed to save product: $e',
+          backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }

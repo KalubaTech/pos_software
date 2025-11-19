@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:pos_software/services/data_sync_service.dart';
 import 'package:pos_software/services/subscription_service.dart';
+// Using Firedart instead of Firebase - Pure Dart, works on Windows!
 import 'dart:io' show Platform;
 
 import 'controllers/navigations_controller.dart';
@@ -13,20 +14,27 @@ import 'controllers/business_settings_controller.dart';
 import 'controllers/appearance_controller.dart';
 import 'controllers/price_tag_designer_controller.dart';
 import 'controllers/product_controller.dart';
+import 'controllers/customer_controller.dart';
 import 'controllers/printer_controller.dart';
 import 'controllers/wallet_controller.dart';
+import 'controllers/universal_sync_controller.dart';
 import 'services/printer_service.dart';
 import 'services/barcode_scanner_service.dart';
 import 'services/bluetooth_permission_service.dart';
 import 'services/image_storage_service.dart';
 import 'services/database_service.dart';
 import 'services/wallet_database_service.dart';
+import 'services/firedart_sync_service.dart'; // Pure Dart sync - works on Windows!
 import 'views/auth/login_view.dart';
 import 'package:get/get.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+
+  // Using Firedart - Pure Dart implementation of Firestore
+  // Works perfectly on Windows without C++ SDK issues!
+  print('🔥 Using Firedart for cloud sync');
 
   // Initialize DatabaseService first
   final dbService = Get.put(DatabaseService());
@@ -40,6 +48,7 @@ void main() async {
   Get.put(WalletController(walletDbService));
 
   Get.put(ProductController());
+  Get.put(CustomerController());
   Get.put(NavigationsController());
   Get.put(AuthController());
   Get.put(BusinessSettingsController());
@@ -50,6 +59,20 @@ void main() async {
   Get.put(PrinterController());
   Get.put(DataSyncService());
   Get.put(SubscriptionService());
+
+  // Initialize Firedart Sync Service - Pure Dart, works on Windows!
+  final syncService = Get.put(FiredartSyncService());
+  print('🔄 Firedart sync service initialized');
+
+  // Initialize with default business ID (you can change this to use actual business ID later)
+  final businessId = GetStorage().read('business_id') ?? 'default_business_001';
+  await GetStorage().write('business_id', businessId); // Save for future use
+  await syncService.initialize(businessId);
+  print('🏢 Sync initialized for business: $businessId');
+
+  // Initialize Universal Sync Controller - Syncs ALL data types!
+  Get.put(UniversalSyncController());
+  print('🌍 Universal sync controller initialized');
 
   // Only initialize PrinterService on mobile platforms (print_bluetooth_thermal only supports Android/iOS)
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
@@ -72,7 +95,6 @@ class MyApp extends StatelessWidget {
     return Obx(() {
       // Reactive theme based on appearance settings
       final primaryColor = Color(appearanceController.primaryColor.value);
-      final isDark = appearanceController.isDarkMode.value;
       final fontMultiplier = appearanceController.fontSizeMultiplier;
 
       return GetMaterialApp(

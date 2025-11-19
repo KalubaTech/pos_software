@@ -209,7 +209,7 @@ Professional Point of Sale system for retail businesses. Manage sales, inventory
 6. receipt printer 
 7. sales tracking
 ``` 
-
+ 
 ---
 
 ## 5️⃣ **Store Logo** (Required)

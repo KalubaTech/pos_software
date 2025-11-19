@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/customer_controller.dart';
-import '../../controllers/business_settings_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
@@ -274,71 +273,110 @@ class TransactionsView extends StatelessWidget {
                   );
                 }
 
-                return GridView.builder(
-                  padding: EdgeInsets.all(24),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.8,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: productController.filteredProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = productController.filteredProducts[index];
-                    return _buildProductCard(product, cartController, isDark);
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Determine if we're on mobile
+                    final isMobile = constraints.maxWidth < 600;
+
+                    if (isMobile) {
+                      // Mobile: 2 column grid with compact cards
+                      return GridView.builder(
+                        padding: EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: productController.filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final product =
+                              productController.filteredProducts[index];
+                          return _buildMobileProductCard(
+                            product,
+                            cartController,
+                            isDark,
+                          );
+                        },
+                      );
+                    } else {
+                      // Desktop: 3 column grid
+                      return GridView.builder(
+                        padding: EdgeInsets.all(24),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.8,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: productController.filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final product =
+                              productController.filteredProducts[index];
+                          return _buildProductCard(
+                            product,
+                            cartController,
+                            isDark,
+                          );
+                        },
+                      );
+                    }
                   },
                 );
               }),
             ),
           ],
         ),
-        // Floating Barcode Scanner Button
-        Positioned(
-          right: 24,
-          bottom: 24,
-          child: FloatingActionButton.extended(
-            onPressed: () async {
-              final barcode = await barcodeScanner.scanBarcode();
-              if (barcode != null) {
-                final product = await barcodeScanner.findProductByBarcode(
-                  barcode,
-                );
-                if (product != null) {
-                  cartController.addToCart(product);
-                  Get.snackbar(
-                    'Product Added',
-                    '${product.name} added to cart',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: isDark
-                        ? AppColors.darkSecondary.withOpacity(0.9)
-                        : Colors.green,
-                    colorText: isDark
-                        ? AppColors.darkTextPrimary
-                        : Colors.white,
-                    duration: Duration(seconds: 2),
+        // Floating Barcode Scanner Button - Hidden on mobile to avoid blocking products
+        if (!context.isMobile)
+          Positioned(
+            right: 24,
+            bottom: 24,
+            child: FloatingActionButton.extended(
+              onPressed: () async {
+                final barcode = await barcodeScanner.scanBarcode();
+                if (barcode != null) {
+                  final product = await barcodeScanner.findProductByBarcode(
+                    barcode,
                   );
-                } else {
-                  Get.snackbar(
-                    'Product Not Found',
-                    'No product found with barcode: $barcode',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.orange,
-                    colorText: Colors.white,
-                  );
+                  if (product != null) {
+                    cartController.addToCart(product);
+                    Get.snackbar(
+                      'Product Added',
+                      '${product.name} added to cart',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: isDark
+                          ? AppColors.darkSecondary.withOpacity(0.9)
+                          : Colors.green,
+                      colorText: isDark
+                          ? AppColors.darkTextPrimary
+                          : Colors.white,
+                      duration: Duration(seconds: 2),
+                    );
+                  } else {
+                    Get.snackbar(
+                      'Product Not Found',
+                      'No product found with barcode: $barcode',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.orange,
+                      colorText: Colors.white,
+                    );
+                  }
                 }
-              }
-            },
-            backgroundColor: isDark ? AppColors.darkPrimary : AppColors.primary,
-            icon: Icon(Iconsax.scan_barcode, color: Colors.white),
-            label: Text(
-              'Scan Barcode',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+              },
+              backgroundColor: isDark
+                  ? AppColors.darkPrimary
+                  : AppColors.primary,
+              icon: Icon(Iconsax.scan_barcode, color: Colors.white),
+              label: Text(
+                'Scan Barcode',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -455,6 +493,209 @@ class TransactionsView extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileProductCard(
+    product,
+    CartController cartController,
+    bool isDark,
+  ) {
+    final hasVariants =
+        product.variants != null && product.variants!.isNotEmpty;
+    final isLowStock = product.stock <= product.minStock;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          print('🔘 Mobile card tapped: ${product.name}');
+          if (hasVariants) {
+            Get.dialog(
+              VariantSelectionDialog(
+                product: product,
+                onVariantSelected: (variant) {
+                  cartController.addToCart(product, variant: variant);
+                },
+              ),
+            );
+          } else {
+            cartController.addToCart(product);
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Card(
+          elevation: 2,
+          color: AppColors.getSurfaceColor(isDark),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: isLowStock
+                ? BorderSide(color: Colors.orange.withOpacity(0.5), width: 1)
+                : BorderSide.none,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Product Image
+              Expanded(
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      child: LocalImageWidget(
+                        imagePath: product.imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+                    ),
+                    // Low stock badge
+                    if (isLowStock)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Iconsax.warning_2,
+                                size: 10,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                'Low',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // Variants badge
+                    if (hasVariants)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.primary)
+                                    .withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '${product.variants!.length}',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Product Info
+              Padding(
+                padding: EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 4),
+                    Obx(
+                      () => Text(
+                        CurrencyFormatter.format(product.price),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          product.category,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.primary)
+                                    .withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${product.stock} ${product.unit}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppColors.darkPrimary
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

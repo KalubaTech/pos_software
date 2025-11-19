@@ -716,25 +716,37 @@ class ReportsView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Recent Transactions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.getTextPrimary(isDark),
+              Expanded(
+                child: Text(
+                  'Recent Transactions',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              SizedBox(width: 8),
               TextButton.icon(
                 onPressed: () {},
                 icon: Icon(
                   Iconsax.arrow_right_3,
+                  size: 16,
                   color: isDark ? AppColors.darkPrimary : AppColors.primary,
                 ),
                 label: Text(
                   'View All',
                   style: TextStyle(
                     color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    fontSize: 14,
                   ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
             ],

@@ -5,7 +5,6 @@ import '../../controllers/customer_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../models/client_model.dart';
 import '../../utils/colors.dart';
-import '../../utils/responsive.dart';
 import '../../utils/ui_constants.dart';
 
 class CustomersView extends StatelessWidget {
@@ -214,10 +213,14 @@ class CustomersView extends StatelessWidget {
                       color: AppColors.getTextSecondary(isDark),
                     ),
                     SizedBox(width: 6),
-                    Text(
-                      customer.email,
-                      style: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
+                    Expanded(
+                      child: Text(
+                        customer.email,
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -231,10 +234,14 @@ class CustomersView extends StatelessWidget {
                       color: AppColors.getTextSecondary(isDark),
                     ),
                     SizedBox(width: 6),
-                    Text(
-                      customer.phoneNumber,
-                      style: TextStyle(
-                        color: AppColors.getTextSecondary(isDark),
+                    Expanded(
+                      child: Text(
+                        customer.phoneNumber,
+                        style: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

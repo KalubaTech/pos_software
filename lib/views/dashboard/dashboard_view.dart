@@ -130,13 +130,18 @@ class DashboardView extends StatelessWidget {
     final appearanceController = Get.find<AppearanceController>();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(32, 50, 32, 20),
+      padding: EdgeInsets.fromLTRB(
+        context.isMobile ? 16 : 32,
+        context.isMobile ? 20 : 50,
+        context.isMobile ? 16 : 32,
+        context.isMobile ? 16 : 20,
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(context.isMobile ? 16 : 20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -239,8 +244,9 @@ class DashboardView extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: context.isMobile ? 8 : 16),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Epic Theme Toggle Button
                     Container(
@@ -301,7 +307,7 @@ class DashboardView extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: context.isMobile ? 8 : 12),
                     // Refresh Button
                     Container(
                       decoration: BoxDecoration(
@@ -322,29 +328,37 @@ class DashboardView extends StatelessWidget {
                           onTap: () => controller.refresh(),
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Iconsax.refresh,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Refresh',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                            padding: context.isMobile
+                                ? const EdgeInsets.all(16)
+                                : const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
                                   ),
-                                ),
-                              ],
-                            ),
+                            child: context.isMobile
+                                ? Icon(
+                                    Iconsax.refresh,
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Iconsax.refresh,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Refresh',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ),
                       ),

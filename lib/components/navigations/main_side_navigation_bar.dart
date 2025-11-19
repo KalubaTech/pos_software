@@ -14,8 +14,6 @@ class MainSideNavigationBar extends StatefulWidget {
 }
 
 class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
-  int _selectedIndex = 0;
-
   // Collapsed width for Windows desktop (icon-only)
   final double collapsedWidth = 60.0;
 
@@ -30,7 +28,17 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
     'Settings',
   ];
 
-  NavigationsController _navigationsController = Get.find();
+  final NavigationsController _navigationsController = Get.find();
+
+  // Get the selected index based on current navigation
+  int _getSelectedIndex() {
+    final currentPage = _navigationsController.currentMainNavigation.value
+        .toLowerCase();
+    final index = menuItems.indexWhere(
+      (item) => item.toLowerCase() == currentPage,
+    );
+    return index >= 0 ? index : 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +62,7 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
             Padding(
               padding: EdgeInsets.only(
                 top: 20.0,
-                left: showLabels ? 24.0 : 0,
+                left: showLabels ? 40.0 : 0,
                 bottom: 20.0,
               ),
               child: showLabels
@@ -72,32 +80,33 @@ class _MainSideNavigationBarState extends State<MainSideNavigationBar> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
             ),
-
             // Menu Items
             Expanded(
-              child: ListView.builder(
-                itemCount: menuItems.length,
-                itemBuilder: (context, index) {
-                  final item = menuItems[index];
-                  return SidebarButtonItem(
-                    title: item,
-                    icon: _getIconForMenuItem(item),
-                    isExpanded: showLabels,
-                    isSelected: _selectedIndex == index,
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = index;
-                      });
-                      _navigationsController.mainNavigation(item.toLowerCase());
+              child: Obx(() {
+                final selectedIndex = _getSelectedIndex();
+                return ListView.builder(
+                  itemCount: menuItems.length,
+                  itemBuilder: (context, index) {
+                    final item = menuItems[index];
+                    return SidebarButtonItem(
+                      title: item,
+                      icon: _getIconForMenuItem(item),
+                      isExpanded: showLabels,
+                      isSelected: selectedIndex == index,
+                      onTap: () {
+                        _navigationsController.mainNavigation(
+                          item.toLowerCase(),
+                        );
 
-                      // Close drawer on mobile after selection
-                      if (isDrawer) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  );
-                },
-              ),
+                        // Close drawer on mobile after selection
+                        if (isDrawer) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    );
+                  },
+                );
+              }),
             ),
 
             // Bottom section (logout button or user info)

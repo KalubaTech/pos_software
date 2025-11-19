@@ -153,9 +153,10 @@ class SyncSettingsView extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Synchronize data with external database',
+                        'Sync transactions, products, and customers across devices',
                         style: TextStyle(fontSize: 14, color: Colors.white70),
                         overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
                       ),
                     ],
                   ),
@@ -276,6 +277,38 @@ class SyncSettingsView extends StatelessWidget {
                 ],
               );
             }),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                    .withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                      .withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Iconsax.info_circle,
+                    size: 16,
+                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Syncs: Transactions, Products, Customers & Inventory levels',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -874,26 +907,32 @@ class SyncSettingsView extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildFeatureItem(
-                        'Multi-device sync',
-                        'Access your data from anywhere',
+                        'Transactions sync',
+                        'All sales data across devices',
                         isDark,
                       ),
                       SizedBox(height: 16),
                       _buildFeatureItem(
-                        'Real-time updates',
-                        'Automatic background synchronization',
+                        'Products & Inventory',
+                        'Stock levels updated everywhere',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Customer data',
+                        'Centralized customer database',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Automatic sync',
+                        'Background updates every few minutes',
                         isDark,
                       ),
                       SizedBox(height: 16),
                       _buildFeatureItem(
                         'Cloud backup',
                         'Never lose your business data',
-                        isDark,
-                      ),
-                      SizedBox(height: 16),
-                      _buildFeatureItem(
-                        'Team collaboration',
-                        'Share data across your team',
                         isDark,
                       ),
                     ],

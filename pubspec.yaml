@@ -67,7 +67,7 @@ dependencies:
   flutter_face_pile: ^0.0.3
   atomic_webview: ^0.0.6
   cropperx: ^1.1.1
-  #firedart: ^0.9.8
+  firedart: ^0.9.8  # Pure Dart Firebase - Works on Windows!
   cached_network_image: ^3.4.1
   url_launcher: ^6.3.1
   flutter_smart_dialog: ^4.9.8+8
@@ -92,7 +92,12 @@ dependencies:
   fl_chart: ^0.66.0
   connectivity_plus: ^5.0.2
   audioplayers: ^5.2.1
-  # cloud_firestore: ^4.17.3
+  # Firebase dependencies for sync - TEMPORARILY DISABLED due to Windows C++ linker issues
+  # See FIREBASE_WINDOWS_ISSUE.md for details and alternatives
+  # firebase_core: ^3.6.0
+  # cloud_firestore: ^5.4.4
+  # firebase_auth: ^5.3.1
+  # firebase_storage: ^12.3.4
   csv: ^6.0.0
   flutter_dotenv: ^5.0.2
   encrypt: ^5.0.1
@@ -101,6 +106,7 @@ dependencies:
   sqflite_common_ffi: ^2.3.3  # For Windows/Linux/macOS support
   path: ^1.9.0
   mobile_scanner: ^5.2.3  # Camera-based barcode scanner
+  image: ^4.2.0  # Image compression and manipulation
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -131,6 +137,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - shorebird.yaml
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -173,44 +181,36 @@ msix_config:
   # Display name shown in Microsoft Store and Windows Start Menu
   display_name: Dynamos POS
   
-  # Publisher display name - Must match your Microsoft Partner Center account
-  # Get this from Partner Center after registration
+  # Publisher display name - From Partner Center Product Identity
   publisher_display_name: Kaloo Technologies
   
-  # Identity name - Unique identifier for your app
-  # Format: PublisherPrefix.AppName
-  # Get this from Partner Center after reserving app name
+  # Identity name - From Partner Center: Package/Identity/Name
   identity_name: KalooTechnologies.DynamosPOS
   
-  # MSIX version - Must be incremented for each update
+  # MSIX version - Incremented to fix duplicate package error
   # Format: Major.Minor.Build.Revision
-  msix_version: 1.0.0.0
+  msix_version: 1.0.2.0
   
-  # Publisher identity - Get this from Microsoft Partner Center
-  # After creating your app, go to Product Identity page
-  # Format: CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-  # IMPORTANT: Replace this with your actual publisher ID from Partner Center
+  # Publisher identity - From Partner Center: Package/Identity/Publisher
   publisher: CN=6C8EDE9F-2E47-49E3-B93C-97CDD74A456A
+  
+  # Store ID from Partner Center
+  store_id: 9NN5846SG0SF
   
   # Logo/Icon path - PNG format required (not .ico)
   # Create multiple sizes: 44x44, 50x50, 150x150, 310x150
   logo_path: windows/runner/resources/app_icon.png
   
   # App capabilities - Windows permissions your app requires
+  # Removed 'documentsLibrary' - requires special approval
+  # Use 'runFullTrust' only if you have approval from Microsoft
   # Common capabilities:
   # - internetClient: Internet access
   # - internetClientServer: Internet and local network
   # - privateNetworkClientServer: Local network access
-  # - documentsLibrary: Access to documents
-  # - picturesLibrary: Access to pictures
-  # - videosLibrary: Access to videos
-  # - musicLibrary: Access to music
   # - removableStorage: Access to removable storage
-  # - location: GPS location
-  # - microphone: Microphone access
-  # - webcam: Camera access
   # - bluetooth: Bluetooth connectivity
-  capabilities: internetClient,internetClientServer,privateNetworkClientServer,documentsLibrary,removableStorage,bluetooth
+  capabilities: internetClient,internetClientServer,privateNetworkClientServer,removableStorage,bluetooth
   
   # Languages supported by your app
   languages: en-us

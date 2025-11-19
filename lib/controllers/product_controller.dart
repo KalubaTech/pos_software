@@ -1,9 +1,11 @@
 import 'package:get/get.dart';
 import '../models/product_model.dart';
 import '../services/database_service.dart';
+import 'universal_sync_controller.dart';
 
 class ProductController extends GetxController {
   final DatabaseService _dbService = Get.find<DatabaseService>();
+  UniversalSyncController? _syncController;
 
   var products = <ProductModel>[].obs;
   var filteredProducts = <ProductModel>[].obs;
@@ -13,6 +15,13 @@ class ProductController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Try to get universal sync controller
+    try {
+      _syncController = Get.find<UniversalSyncController>();
+      print('✅ ProductController: Universal sync connected');
+    } catch (e) {
+      print('⚠️ ProductController: Sync not available yet');
+    }
     fetchProducts();
   }
 
@@ -59,6 +68,10 @@ class ProductController extends GetxController {
       final id = await _dbService.insertProduct(product);
       if (id > 0) {
         await fetchProducts();
+
+        // Sync to cloud via UniversalSyncController
+        _syncController?.syncProduct(product);
+
         Get.snackbar('Success', 'Product added successfully');
         return true;
       }
@@ -74,6 +87,10 @@ class ProductController extends GetxController {
       final count = await _dbService.updateProduct(product);
       if (count > 0) {
         await fetchProducts();
+
+        // Sync to cloud via UniversalSyncController
+        _syncController?.syncProduct(product);
+
         Get.snackbar('Success', 'Product updated successfully');
         return true;
       }
@@ -89,6 +106,10 @@ class ProductController extends GetxController {
       final count = await _dbService.deleteProduct(id);
       if (count > 0) {
         await fetchProducts();
+
+        // Sync deletion to cloud via UniversalSyncController
+        _syncController?.deleteProductFromCloud(id);
+
         Get.snackbar('Success', 'Product deleted successfully');
         return true;
       }

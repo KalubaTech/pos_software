@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class LocalImageWidget extends StatelessWidget {
   final String? imagePath;
@@ -29,22 +30,33 @@ class LocalImageWidget extends StatelessWidget {
       return _buildPlaceholder();
     }
 
-    // Check if it's a URL (for backward compatibility)
+    // Check if it's a URL (use CachedNetworkImage for remote images)
     if (imagePath!.startsWith('http://') || imagePath!.startsWith('https://')) {
+      // Safe conversion of width/height for cache settings
+      int? cacheWidth;
+      int? cacheHeight;
+
+      if (width != null && width!.isFinite && width! > 0) {
+        cacheWidth = width!.toInt();
+      }
+      if (height != null && height!.isFinite && height! > 0) {
+        cacheHeight = height!.toInt();
+      }
+
       return ClipRRect(
         borderRadius: borderRadius ?? BorderRadius.zero,
-        child: Image.network(
-          imagePath!,
+        child: CachedNetworkImage(
+          imageUrl: imagePath!,
           width: width,
           height: height,
           fit: fit,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return _buildPlaceholder();
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return _buildError();
-          },
+          placeholder: (context, url) => _buildPlaceholder(),
+          errorWidget: (context, url, error) => _buildError(),
+          // Cache settings for optimal performance
+          memCacheWidth: cacheWidth,
+          memCacheHeight: cacheHeight,
+          maxWidthDiskCache: 1024,
+          maxHeightDiskCache: 1024,
         ),
       );
     }

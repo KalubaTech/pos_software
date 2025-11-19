@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_software/components/navigations/main_side_navigation_bar.dart';
+import 'package:pos_software/components/sync_status_indicator.dart'; // Re-enabled with Firedart!
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'controllers/navigations_controller.dart';
@@ -75,7 +76,7 @@ class PageAnchor extends StatelessWidget {
                     final currentPage =
                         navController.currentMainNavigation.value;
                     return Text(
-                      currentPage,
+                      '${currentPage.capitalize}',
                       style: TextStyle(
                         color: AppColors.getTextPrimary(isDark),
                         fontSize: Responsive.fontSize(
@@ -88,6 +89,15 @@ class PageAnchor extends StatelessWidget {
                     );
                   }),
                   actions: [
+                    // Sync status indicator - Now using Firedart (works on Windows!)
+                    Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: SyncStatusIndicator(
+                        showLabel: false,
+                        iconSize: 20,
+                        compact: true,
+                      ),
+                    ),
                     // User menu button on mobile
                     IconButton(
                       icon: Icon(

@@ -32,6 +32,9 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# Suppress CRT secure warnings globally for Firebase SDK
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
@@ -43,6 +46,9 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+  # Suppress CRT secure warnings and macro redefinition warnings for Firebase SDK
+  target_compile_options(${TARGET} PRIVATE /wd"4005" /wd"4996")
+  target_compile_definitions(${TARGET} PRIVATE "_CRT_SECURE_NO_WARNINGS")
 endfunction()
 
 # Flutter library and tool build rules.

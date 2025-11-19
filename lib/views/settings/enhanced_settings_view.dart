@@ -949,15 +949,15 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                               SizedBox(height: 12),
                               Padding(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: isMobile ? 24 : 32,
+                                  horizontal: isMobile ? 24 : 20,
                                 ),
                                 child: Text(
                                   'Make sure:\n• Bluetooth is enabled\n• Printer is powered on\n• Printer is in pairing mode',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    fontSize: isMobile ? 13 : 14,
+                                    fontSize: isMobile ? 12 : 10,
                                     color: Colors.grey[600],
-                                    height: 1.5,
+                                    height: 1.0,
                                   ),
                                 ),
                               ),
