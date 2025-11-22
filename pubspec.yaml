@@ -60,6 +60,7 @@ dependencies:
   carousel_slider: ^5.0.0
   carousel_indicator_simple: ^1.0.0
   flutter_sliding_toast:
+  share_plus: ^10.1.4
   #flutter_easy_search_bar: ^0.0.2
   flutter_resizable_container:
   easy_draggable: ^0.0.2
@@ -107,6 +108,9 @@ dependencies:
   path: ^1.9.0
   mobile_scanner: ^5.2.3  # Camera-based barcode scanner
   image: ^4.2.0  # Image compression and manipulation
+  geolocator: ^14.0.2  # Get device location (GPS)
+  geocoding: ^4.0.0  # Convert coordinates to addresses and vice versa
+  google_maps_flutter: ^2.14.0  # Interactive map for location picking
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -138,6 +142,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/
     - shorebird.yaml
 
   # To add assets to your application, add an assets section, like this:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_software/components/navigations/main_side_navigation_bar.dart';
 import 'package:pos_software/components/sync_status_indicator.dart'; // Re-enabled with Firedart!
+import 'package:pos_software/components/widgets/floating_calculator.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'controllers/navigations_controller.dart';
@@ -9,12 +10,14 @@ import 'controllers/appearance_controller.dart';
 import 'models/cashier_model.dart';
 import 'views/dashboard/dashboard_view.dart';
 import 'views/transactions/transactions_view.dart';
+import 'views/online_orders/online_orders_view.dart';
 import 'views/customers/customers_view.dart';
 import 'views/inventory/enhanced_inventory_view.dart';
 import 'views/reports/reports_view.dart';
 import 'views/price_tag_designer/price_tag_designer_view.dart';
 import 'views/settings/enhanced_settings_view.dart';
 import 'views/wallet/wallet_dashboard_view.dart';
+import 'views/tools/image_editor_view.dart';
 import 'utils/colors.dart';
 import 'utils/responsive.dart';
 
@@ -124,34 +127,44 @@ class PageAnchor extends StatelessWidget {
             // Safe area only on mobile platforms
             top: Responsive.isMobilePlatform,
             bottom: Responsive.isMobilePlatform,
-            child: Row(
+            child: Stack(
               children: [
-                // Desktop: Permanent collapsed sidebar (icon-only)
-                if (context.isDesktop)
-                  Container(
-                    width: 60, // Fixed collapsed width for icon-only sidebar
-                    decoration: BoxDecoration(
-                      color: AppColors.getSurfaceColor(isDark),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                          blurRadius: 10,
-                          offset: Offset(2, 0),
+                Row(
+                  children: [
+                    // Desktop: Permanent collapsed sidebar (icon-only)
+                    if (context.isDesktop)
+                      Container(
+                        width:
+                            60, // Fixed collapsed width for icon-only sidebar
+                        decoration: BoxDecoration(
+                          color: AppColors.getSurfaceColor(isDark),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(
+                                isDark ? 0.3 : 0.05,
+                              ),
+                              blurRadius: 10,
+                              offset: Offset(2, 0),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: MainSideNavigationBar(),
-                  ),
+                        child: MainSideNavigationBar(),
+                      ),
 
-                // Main page content
-                Expanded(
-                  child: GetBuilder<NavigationsController>(
-                    builder: (item) {
-                      String currentMainPage = item.currentMainNavigation.value;
-                      return _getPageForRoute(currentMainPage);
-                    },
-                  ),
+                    // Main page content
+                    Expanded(
+                      child: GetBuilder<NavigationsController>(
+                        builder: (item) {
+                          String currentMainPage =
+                              item.currentMainNavigation.value;
+                          return _getPageForRoute(currentMainPage);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
+                // Floating Calculator overlay
+                const FloatingCalculator(),
               ],
             ),
           ),
@@ -282,6 +295,8 @@ class PageAnchor extends StatelessWidget {
         return DashboardView();
       case 'transactions':
         return TransactionsView();
+      case 'online orders':
+        return const OnlineOrdersView();
       case 'customers':
         return CustomersView();
       case 'inventory':
@@ -292,6 +307,8 @@ class PageAnchor extends StatelessWidget {
         return ReportsView();
       case 'price tags':
         return PriceTagDesignerView();
+      case 'image_editor':
+        return const ImageEditorView();
       case 'settings':
         return EnhancedSettingsView();
       default:

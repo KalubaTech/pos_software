@@ -203,14 +203,26 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               ),
             ),
             SizedBox(height: 8),
-            Obx(
-              () => _buildSummaryRow(
-                'Tax (8%)',
-                CurrencyFormatter.format(widget.cartController.tax),
-                isDark: isDark,
-              ),
-            ),
-            SizedBox(height: 8),
+            Obx(() {
+              final settings = Get.find<BusinessSettingsController>();
+              // Force recalculation by reading settings inside Obx
+              final taxAmount = settings.taxEnabled.value
+                  ? widget.cartController.subtotal *
+                        (settings.taxRate.value / 100)
+                  : 0.0;
+
+              if (settings.taxEnabled.value && taxAmount > 0) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: _buildSummaryRow(
+                    '${settings.taxName.value} (${settings.taxRate.value.toStringAsFixed(1)}%)',
+                    CurrencyFormatter.format(taxAmount),
+                    isDark: isDark,
+                  ),
+                );
+              }
+              return SizedBox();
+            }),
             Obx(() {
               if (widget.cartController.discount.value > 0) {
                 return Padding(
@@ -226,14 +238,25 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
               return SizedBox();
             }),
             Divider(height: 16, color: AppColors.getDivider(isDark)),
-            Obx(
-              () => _buildSummaryRow(
+            Obx(() {
+              final settings = Get.find<BusinessSettingsController>();
+              // Recalculate tax inside Obx for reactivity
+              final taxAmount = settings.taxEnabled.value
+                  ? widget.cartController.subtotal *
+                        (settings.taxRate.value / 100)
+                  : 0.0;
+              final totalAmount =
+                  widget.cartController.subtotal +
+                  taxAmount -
+                  widget.cartController.discount.value;
+
+              return _buildSummaryRow(
                 'TOTAL',
-                CurrencyFormatter.format(widget.cartController.total),
+                CurrencyFormatter.format(totalAmount),
                 large: true,
                 isDark: isDark,
-              ),
-            ),
+              );
+            }),
           ],
         ),
       ),
@@ -275,6 +298,9 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
   }
 
   Widget _buildPaymentMethods(bool isDark) {
+    // Get settings controller
+    final settings = Get.find<BusinessSettingsController>();
+
     // Check if wallet is enabled
     bool isWalletEnabled = false;
     try {
@@ -285,25 +311,8 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
       isWalletEnabled = false;
     }
 
-    // Build payment options list
-    final paymentOptions = <Widget>[
-      _buildPaymentOption(PaymentMethod.cash, Iconsax.money, 'Cash', isDark),
-      _buildPaymentOption(PaymentMethod.card, Iconsax.card, 'Card', isDark),
-      // Only show mobile payment if wallet is enabled
-      if (isWalletEnabled)
-        _buildPaymentOption(
-          PaymentMethod.mobile,
-          Iconsax.mobile,
-          'Mobile',
-          isDark,
-        ),
-      _buildPaymentOption(
-        PaymentMethod.other,
-        Iconsax.wallet_3,
-        'Other',
-        isDark,
-      ),
-    ];
+    // Check if mobile (small screen)
+    final isMobile = MediaQuery.of(Get.context!).size.width < 600;
 
     return FadeInUp(
       duration: Duration(milliseconds: 500),
@@ -319,17 +328,15 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
             ),
           ),
           SizedBox(height: 16),
-          GridView.count(
-            shrinkWrap: true,
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.2,
-            physics: NeverScrollableScrollPhysics(),
-            children: paymentOptions,
-          ),
+
+          // Use dropdown on mobile, grid on desktop
+          if (isMobile)
+            _buildPaymentDropdown(isDark, isWalletEnabled, settings)
+          else
+            _buildPaymentGrid(isDark, isWalletEnabled, settings),
+
           // Show info message if wallet is disabled
-          if (!isWalletEnabled) ...[
+          if (!isWalletEnabled && settings.acceptMobile.value) ...[
             SizedBox(height: 12),
             Container(
               padding: EdgeInsets.all(12),
@@ -360,6 +367,167 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
     );
   }
 
+  Widget _buildPaymentDropdown(
+    bool isDark,
+    bool isWalletEnabled,
+    BusinessSettingsController settings,
+  ) {
+    // Build payment methods list based on settings
+    final paymentMethods = <Map<String, dynamic>>[];
+
+    if (settings.acceptCash.value) {
+      paymentMethods.add({
+        'method': PaymentMethod.cash,
+        'icon': Iconsax.money,
+        'label': 'Cash',
+      });
+    }
+
+    if (settings.acceptCard.value) {
+      paymentMethods.add({
+        'method': PaymentMethod.card,
+        'icon': Iconsax.card,
+        'label': 'Card',
+      });
+    }
+
+    // Show mobile money if setting is enabled (regardless of wallet status)
+    if (settings.acceptMobile.value) {
+      paymentMethods.add({
+        'method': PaymentMethod.mobile,
+        'icon': Iconsax.mobile,
+        'label': 'Mobile Money',
+      });
+    }
+
+    // Always show "Other" as a fallback
+    paymentMethods.add({
+      'method': PaymentMethod.other,
+      'icon': Iconsax.wallet_3,
+      'label': 'Other',
+    });
+
+    // Ensure selected method is in the list, otherwise default to first available
+    if (!paymentMethods.any((m) => m['method'] == selectedMethod)) {
+      setState(() {
+        selectedMethod = paymentMethods.first['method'] as PaymentMethod;
+      });
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.getDivider(isDark)),
+      ),
+      child: DropdownButtonFormField<PaymentMethod>(
+        value: selectedMethod,
+        isExpanded: true,
+        decoration: InputDecoration(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          border: InputBorder.none,
+          prefixIcon: Icon(
+            paymentMethods.firstWhere(
+              (m) => m['method'] == selectedMethod,
+            )['icon'],
+            color: isDark ? AppColors.darkPrimary : AppColors.primary,
+          ),
+        ),
+        dropdownColor: AppColors.getSurfaceColor(isDark),
+        style: TextStyle(color: AppColors.getTextPrimary(isDark), fontSize: 16),
+        items: paymentMethods.map((method) {
+          return DropdownMenuItem<PaymentMethod>(
+            value: method['method'] as PaymentMethod,
+            child: Row(
+              children: [
+                Icon(
+                  method['icon'] as IconData,
+                  size: 20,
+                  color: AppColors.getTextSecondary(isDark),
+                ),
+                SizedBox(width: 12),
+                Text(method['label'] as String),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => selectedMethod = value);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildPaymentGrid(
+    bool isDark,
+    bool isWalletEnabled,
+    BusinessSettingsController settings,
+  ) {
+    // Build payment options list based on settings
+    final paymentOptions = <Widget>[];
+
+    if (settings.acceptCash.value) {
+      paymentOptions.add(
+        _buildPaymentOption(PaymentMethod.cash, Iconsax.money, 'Cash', isDark),
+      );
+    }
+
+    if (settings.acceptCard.value) {
+      paymentOptions.add(
+        _buildPaymentOption(PaymentMethod.card, Iconsax.card, 'Card', isDark),
+      );
+    }
+
+    // Show mobile money if setting is enabled (regardless of wallet status)
+    if (settings.acceptMobile.value) {
+      paymentOptions.add(
+        _buildPaymentOption(
+          PaymentMethod.mobile,
+          Iconsax.mobile,
+          'Mobile',
+          isDark,
+        ),
+      );
+    }
+
+    // Always show "Other" as a fallback
+    paymentOptions.add(
+      _buildPaymentOption(
+        PaymentMethod.other,
+        Iconsax.wallet_3,
+        'Other',
+        isDark,
+      ),
+    );
+
+    // Ensure selected method is available, otherwise default to first
+    final availableMethods = <PaymentMethod>[];
+    if (settings.acceptCash.value) availableMethods.add(PaymentMethod.cash);
+    if (settings.acceptCard.value) availableMethods.add(PaymentMethod.card);
+    if (settings.acceptMobile.value) availableMethods.add(PaymentMethod.mobile);
+    availableMethods.add(PaymentMethod.other);
+
+    if (!availableMethods.contains(selectedMethod)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          selectedMethod = availableMethods.first;
+        });
+      });
+    }
+
+    return GridView.count(
+      shrinkWrap: true,
+      crossAxisCount: paymentOptions.length > 3 ? 4 : paymentOptions.length,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 0.85,
+      physics: NeverScrollableScrollPhysics(),
+      children: paymentOptions,
+    );
+  }
+
   Widget _buildPaymentOption(
     PaymentMethod method,
     IconData icon,
@@ -373,7 +541,7 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.all(12),
+        padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark ? AppColors.darkPrimary : AppColors.primary)
@@ -398,24 +566,28 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 32,
+              size: 20,
               color: isSelected
                   ? Colors.white
                   : AppColors.getTextSecondary(isDark),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: isSelected
                     ? Colors.white
                     : AppColors.getTextPrimary(isDark),
               ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -632,8 +804,10 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
   }
 
   Widget _buildFooter(bool isDark) {
+    final isMobile = MediaQuery.of(Get.context!).size.width < 600;
+
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : Colors.white,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -645,61 +819,130 @@ class _EnhancedCheckoutDialogState extends State<EnhancedCheckoutDialog>
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: isProcessing ? null : () => Get.back(),
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: AppColors.getDivider(isDark)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                foregroundColor: AppColors.getTextSecondary(isDark),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: isProcessing ? null : _processPayment,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: isDark
-                    ? AppColors.darkPrimary
-                    : AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-              child: isProcessing
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      child: isMobile
+          ? Column(
+              children: [
+                // Complete Payment button (full width on mobile)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isProcessing ? null : _processPayment,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    )
-                  : Text(
-                      'Complete Payment',
+                      elevation: 2,
+                    ),
+                    child: isProcessing
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            'Complete Payment',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+                SizedBox(height: 12),
+                // Cancel button (full width on mobile)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: isProcessing ? null : () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: AppColors.getDivider(isDark)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      foregroundColor: AppColors.getTextSecondary(isDark),
+                    ),
+                    child: Text(
+                      'Cancel',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: isProcessing ? null : () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: AppColors.getDivider(isDark)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      foregroundColor: AppColors.getTextSecondary(isDark),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: isProcessing ? null : _processPayment,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: isDark
+                          ? AppColors.darkPrimary
+                          : AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: isProcessing
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            'Complete Payment',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 

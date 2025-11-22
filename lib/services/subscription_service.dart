@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/subscription_model.dart';
 import '../models/unresolved_transaction_model.dart';
 import '../services/database_service.dart';
+import '../controllers/universal_sync_controller.dart';
 
 class SubscriptionService extends GetxService {
   final _storage = GetStorage();
@@ -33,6 +34,36 @@ class SubscriptionService extends GetxService {
     await _loadSubscription();
     await _loadUnresolvedTransactions();
     _startExpiryCheck();
+
+    // Migrate existing subscription to cloud (for subscriptions created before sync was implemented)
+    await _migrateExistingSubscriptionToCloud();
+  }
+
+  /// Migrate existing subscription to cloud (one-time migration for pre-sync subscriptions)
+  Future<void> _migrateExistingSubscriptionToCloud() async {
+    try {
+      // Check if we have a subscription that needs migration
+      final currentSub = currentSubscription.value;
+      if (currentSub == null) {
+        print('📋 No subscription to migrate');
+        return;
+      }
+
+      // Try to sync to cloud
+      print('🔄 Checking if subscription needs cloud migration...');
+      final universalSync = Get.find<UniversalSyncController>();
+
+      // Push current subscription to cloud
+      await universalSync.syncSubscription(currentSub);
+      print('✅ Migrated subscription to cloud: ${currentSub.planName}');
+
+      // Also trigger full sync to ensure it propagates
+      await universalSync.forceSubscriptionSync();
+      print('✅ Migration complete - subscription synced');
+    } catch (e) {
+      print('⚠️ Subscription migration skipped (sync not ready yet): $e');
+      // This is OK - will sync later when UniversalSyncController is ready
+    }
   }
 
   Future<void> _initializeTable() async {
@@ -234,6 +265,12 @@ class SubscriptionService extends GetxService {
     await _storage.write(_storageKey, subscription.toJson());
   }
 
+  /// Public method to save subscription (for sync purposes)
+  Future<void> saveSubscription(SubscriptionModel subscription) async {
+    await _saveSubscription(subscription);
+    currentSubscription.value = subscription;
+  }
+
   Future<void> _updateSubscriptionStatus(
     String subscriptionId,
     SubscriptionStatus status,
@@ -269,6 +306,17 @@ class SubscriptionService extends GetxService {
         current.isExpired &&
         current.status == SubscriptionStatus.active) {
       await _updateSubscriptionStatus(current.id, SubscriptionStatus.expired);
+
+      // Sync expired subscription status to cloud
+      try {
+        final universalSync = Get.find<UniversalSyncController>();
+        if (currentSubscription.value != null) {
+          await universalSync.syncSubscription(currentSubscription.value!);
+          print('✅ Expired subscription status synced to cloud');
+        }
+      } catch (e) {
+        print('⚠️ Failed to sync expired subscription to cloud: $e');
+      }
 
       Get.snackbar(
         'Subscription Expired',
@@ -328,6 +376,16 @@ class SubscriptionService extends GetxService {
       await _saveSubscription(newSubscription);
       currentSubscription.value = newSubscription;
 
+      // Sync subscription to cloud immediately
+      try {
+        final universalSync = Get.find<UniversalSyncController>();
+        await universalSync.syncSubscription(newSubscription);
+        print('✅ Subscription synced to cloud');
+      } catch (e) {
+        print('⚠️ Failed to sync subscription to cloud: $e');
+        // Continue even if sync fails - will be synced later
+      }
+
       Get.snackbar(
         'Subscription Activated',
         'Your ${newSubscription.planName} subscription is now active!',
@@ -362,6 +420,17 @@ class SubscriptionService extends GetxService {
     }
 
     await _updateSubscriptionStatus(current.id, SubscriptionStatus.cancelled);
+
+    // Sync subscription status to cloud
+    try {
+      final universalSync = Get.find<UniversalSyncController>();
+      if (currentSubscription.value != null) {
+        await universalSync.syncSubscription(currentSubscription.value!);
+        print('✅ Cancelled subscription synced to cloud');
+      }
+    } catch (e) {
+      print('⚠️ Failed to sync cancelled subscription to cloud: $e');
+    }
 
     Get.snackbar(
       'Subscription Cancelled',

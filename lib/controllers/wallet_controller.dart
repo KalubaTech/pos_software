@@ -4,6 +4,7 @@ import '../models/wallet_transaction_model.dart';
 import '../models/withdrawal_request_model.dart';
 import '../services/wallet_database_service.dart';
 import '../services/wallet_service.dart';
+import 'universal_sync_controller.dart';
 
 class WalletController extends GetxController {
   final WalletDatabaseService _walletDb;
@@ -72,6 +73,16 @@ class WalletController extends GetxController {
         await _walletDb.enableWallet(businessId, true);
         wallet.value = existingWallet.copyWith(isEnabled: true);
         isEnabled.value = true;
+
+        // Sync to cloud
+        try {
+          final universalSync = Get.find<UniversalSyncController>();
+          await universalSync.syncWallet(wallet.value!);
+          print('✅ Wallet enabled and synced to cloud');
+        } catch (e) {
+          print('⚠️ Could not sync wallet to cloud: $e');
+        }
+
         Get.snackbar(
           'Success',
           'KalooMoney wallet has been enabled!',
@@ -88,6 +99,15 @@ class WalletController extends GetxController {
         final createdWallet = await _walletDb.createWallet(newWallet);
         wallet.value = createdWallet;
         isEnabled.value = true;
+
+        // Sync to cloud
+        try {
+          final universalSync = Get.find<UniversalSyncController>();
+          await universalSync.syncWallet(wallet.value!);
+          print('✅ Wallet created and synced to cloud');
+        } catch (e) {
+          print('⚠️ Could not sync wallet to cloud: $e');
+        }
 
         Get.snackbar(
           'Success',
@@ -118,6 +138,18 @@ class WalletController extends GetxController {
         wallet.value = wallet.value!.copyWith(isEnabled: false);
       }
       isEnabled.value = false;
+
+      // Sync to cloud
+      if (wallet.value != null) {
+        try {
+          final universalSync = Get.find<UniversalSyncController>();
+          await universalSync.syncWallet(wallet.value!);
+          print('✅ Wallet disabled and synced to cloud');
+        } catch (e) {
+          print('⚠️ Could not sync wallet to cloud: $e');
+        }
+      }
+
       Get.snackbar(
         'Success',
         'KalooMoney wallet has been disabled',
@@ -207,6 +239,15 @@ class WalletController extends GetxController {
 
       // Update local wallet
       wallet.value = wallet.value!.copyWith(balance: newBalance);
+
+      // Sync wallet to cloud
+      try {
+        final universalSync = Get.find<UniversalSyncController>();
+        await universalSync.syncWallet(wallet.value!);
+        print('✅ Wallet balance updated and synced to cloud');
+      } catch (e) {
+        print('⚠️ Could not sync wallet to cloud: $e');
+      }
 
       // Reload transactions
       await loadTransactions();
@@ -356,6 +397,15 @@ class WalletController extends GetxController {
 
       // Update local wallet
       wallet.value = wallet.value!.copyWith(balance: newBalance);
+
+      // Sync wallet to cloud
+      try {
+        final universalSync = Get.find<UniversalSyncController>();
+        await universalSync.syncWallet(wallet.value!);
+        print('✅ Wallet withdrawal processed and synced to cloud');
+      } catch (e) {
+        print('⚠️ Could not sync wallet to cloud: $e');
+      }
 
       await loadTransactions();
       await loadWithdrawalRequests();

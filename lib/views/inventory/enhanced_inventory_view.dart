@@ -1533,21 +1533,26 @@ class EnhancedInventoryView extends StatelessWidget {
       child: ListView(
         shrinkWrap: true,
         children: [
-          Icon(Iconsax.box, size: 80, color: AppColors.getTextTertiary(isDark)),
-          SizedBox(height: 16),
-          Text(
-            'No products found',
-            style: TextStyle(
-              fontSize: 20,
-              color: AppColors.getTextSecondary(isDark),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Iconsax.box, size: 80, color: AppColors.getTextTertiary(isDark)),
+              SizedBox(height: 16),
+              Text(
+                'No products found',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: AppColors.getTextSecondary(isDark),
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Add your first product to get started',
+                style: TextStyle(color: AppColors.getTextSecondary(isDark)),
+              ),
+              SizedBox(height: 20),
+            ],
           ),
-          SizedBox(height: 8),
-          Text(
-            'Add your first product to get started',
-            style: TextStyle(color: AppColors.getTextSecondary(isDark)),
-          ),
-          SizedBox(height: 20),
         ],
       ),
     );

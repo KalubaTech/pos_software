@@ -104,6 +104,13 @@ class WalletDatabaseService {
     return WalletModel.fromJson(maps.first);
   }
 
+  Future<List<WalletModel>> getAllWallets() async {
+    final List<Map<String, dynamic>> maps = await db.query('wallets');
+    return List.generate(maps.length, (i) {
+      return WalletModel.fromJson(maps[i]);
+    });
+  }
+
   Future<WalletModel> createWallet(WalletModel wallet) async {
     final id = await db.insert('wallets', wallet.toJson());
     return wallet.copyWith(id: id);

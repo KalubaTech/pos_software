@@ -40,6 +40,8 @@ class BusinessSettingsView extends StatelessWidget {
                     _buildOperatingHours(controller, isDark),
                     SizedBox(height: 24),
                     _buildPaymentMethods(controller, isDark),
+                    SizedBox(height: 24),
+                    _buildOnlineStoreSettings(controller, isDark),
                   ],
                 ),
               ),
@@ -1143,7 +1145,7 @@ class BusinessSettingsView extends StatelessWidget {
                 value: controller.acceptMobile.value,
                 onChanged: (value) async {
                   controller.acceptMobile.value = value;
-                  
+
                   // Also enable/disable KalooMoney wallet
                   try {
                     final walletController = Get.find<WalletController>();
@@ -1165,6 +1167,240 @@ class BusinessSettingsView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOnlineStoreSettings(
+    BusinessSettingsController controller,
+    bool isDark,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.getSurfaceColor(isDark),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color:
+                            (isDark ? AppColors.darkPrimary : AppColors.primary)
+                                .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Iconsax.global,
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Online Store',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.getTextPrimary(isDark),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Manage your online presence',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.getTextSecondary(isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20),
+                // Online Store Toggle
+                Obx(
+                  () => SwitchListTile(
+                    value: controller.onlineStoreEnabled.value,
+                    onChanged: (value) {
+                      controller.toggleOnlineStore(value);
+                    },
+                    title: Text(
+                      'Enable Online Store',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.getTextPrimary(isDark),
+                      ),
+                    ),
+                    subtitle: Text(
+                      controller.onlineStoreEnabled.value
+                          ? 'Your store is online. Customers can browse and order products.'
+                          : 'Activate to make products available online',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ),
+                    secondary: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: controller.onlineStoreEnabled.value
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        controller.onlineStoreEnabled.value
+                            ? Iconsax.shop
+                            : Iconsax.shop_remove,
+                        color: controller.onlineStoreEnabled.value
+                            ? Colors.green
+                            : Colors.orange,
+                        size: 20,
+                      ),
+                    ),
+                    activeColor: isDark
+                        ? AppColors.darkPrimary
+                        : AppColors.primary,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                // Info Card
+                if (controller.onlineStoreEnabled.value) ...[
+                  SizedBox(height: 16),
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Iconsax.info_circle, color: Colors.blue, size: 20),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Online Store Active',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? Colors.blue[200]
+                                      : Colors.blue[800],
+                                  fontSize: 13,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'You can now manage which products appear online in the Products section. Look for the "List Online" toggle on each product.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.blue[200]
+                                      : Colors.blue[800],
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  // Statistics
+                  Obx(
+                    () => Row(
+                      children: [
+                        Expanded(
+                          child: _buildOnlineStatCard(
+                            'Products Online',
+                            '${controller.onlineProductCount.value}',
+                            Iconsax.box,
+                            Colors.green,
+                            isDark,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: _buildOnlineStatCard(
+                            'Store Status',
+                            'Active',
+                            Iconsax.tick_circle,
+                            Colors.blue,
+                            isDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOnlineStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDark,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextPrimary(isDark),
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.getTextSecondary(isDark),
+            ),
+          ),
+        ],
       ),
     );
   }

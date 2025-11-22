@@ -1631,6 +1631,7 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
 
   void _showAddCashierDialog(AuthController authController, bool isDark) {
     final nameController = TextEditingController();
+    final emailController = TextEditingController();
     final pinController = TextEditingController();
     UserRole selectedRole = UserRole.cashier;
 
@@ -1718,6 +1719,38 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                             ? AppColors.darkSurfaceVariant
                             : Colors.grey[50],
                       ),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: emailController,
+                      style: TextStyle(color: AppColors.getTextPrimary(isDark)),
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        labelStyle: TextStyle(
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        prefixIcon: Icon(
+                          Iconsax.sms,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: AppColors.getDivider(isDark),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[50],
+                      ),
+                      keyboardType: TextInputType.emailAddress,
                     ),
                     SizedBox(height: 16),
                     TextField(
@@ -1810,14 +1843,14 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                                 child: ElevatedButton(
                                   onPressed: () {
                                     if (nameController.text.isNotEmpty &&
+                                        emailController.text.isNotEmpty &&
                                         pinController.text.length == 4) {
                                       final newCashier = CashierModel(
                                         id: DateTime.now()
                                             .millisecondsSinceEpoch
                                             .toString(),
                                         name: nameController.text,
-                                        email:
-                                            '${nameController.text.toLowerCase().replaceAll(' ', '.')}@pos.local',
+                                        email: emailController.text.trim(),
                                         pin: pinController.text,
                                         role: selectedRole,
                                         isActive: true,
@@ -1879,13 +1912,13 @@ class _EnhancedSettingsViewState extends State<EnhancedSettingsView>
                               ElevatedButton(
                                 onPressed: () {
                                   if (nameController.text.isNotEmpty &&
+                                      emailController.text.isNotEmpty &&
                                       pinController.text.length == 4) {
                                     final newCashier = CashierModel(
                                       id: DateTime.now().millisecondsSinceEpoch
                                           .toString(),
                                       name: nameController.text,
-                                      email:
-                                          '${nameController.text.toLowerCase().replaceAll(' ', '.')}@pos.local',
+                                      email: emailController.text.trim(),
                                       pin: pinController.text,
                                       role: selectedRole,
                                       isActive: true,

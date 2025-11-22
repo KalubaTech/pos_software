@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../controllers/product_controller.dart';
 import '../../controllers/appearance_controller.dart';
+import '../../controllers/business_settings_controller.dart';
 import '../../models/product_model.dart';
 import '../../utils/colors.dart';
 import '../../services/image_storage_service.dart';
@@ -34,6 +35,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
   String _selectedCategory = 'Beverages';
   String _selectedUnit = 'pcs';
   bool _trackInventory = true;
+  bool _listOnline = false;
   String? _imageUrl;
   File? _localImage;
 
@@ -63,6 +65,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     _selectedCategory = product.category;
     _selectedUnit = product.unit ?? 'pcs';
     _trackInventory = product.trackInventory;
+    _listOnline = product.listedOnline;
     _imageUrl = product.imageUrl;
     if (product.variants != null) {
       _variants.addAll(product.variants!);
@@ -70,10 +73,17 @@ class _AddProductDialogState extends State<AddProductDialog> {
   }
 
   void _generateSKU() {
-    final category = _selectedCategory.substring(0, 3).toUpperCase();
+    // Safe substring - take up to 3 characters, or less if string is shorter
+    final category = _selectedCategory.length >= 3
+        ? _selectedCategory.substring(0, 3).toUpperCase()
+        : _selectedCategory.toUpperCase().padRight(3, 'X');
+
     final name = _nameController.text.isEmpty
         ? 'PRD'
-        : _nameController.text.substring(0, 3).toUpperCase();
+        : (_nameController.text.length >= 3
+              ? _nameController.text.substring(0, 3).toUpperCase()
+              : _nameController.text.toUpperCase().padRight(3, 'X'));
+
     final timestamp = DateTime.now().millisecondsSinceEpoch
         .toString()
         .substring(8);
@@ -656,6 +666,8 @@ class _AddProductDialogState extends State<AddProductDialog> {
           subtitle: Text('Enable stock management for this product'),
           secondary: Icon(Iconsax.box_tick),
         ),
+        SizedBox(height: 12),
+        _buildListOnlineToggle(isDark),
         if (_trackInventory) ...[
           SizedBox(height: 16),
           isMobile
@@ -781,6 +793,86 @@ class _AddProductDialogState extends State<AddProductDialog> {
         ),
       ),
     );
+  }
+
+  Widget _buildListOnlineToggle(bool isDark) {
+    try {
+      final settingsController = Get.find<BusinessSettingsController>();
+
+      return Obx(() {
+        final enabled = settingsController.onlineStoreEnabled.value;
+        return Container(
+          decoration: BoxDecoration(
+            color: enabled && _listOnline
+                ? (isDark ? Colors.green[900] : Colors.green[50])
+                : (isDark ? AppColors.darkSurfaceVariant : Colors.grey[100]),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: enabled && _listOnline
+                  ? (isDark ? Colors.green[700]! : Colors.green[300]!)
+                  : (isDark ? AppColors.darkSurfaceVariant : Colors.grey[300]!),
+            ),
+          ),
+          child: SwitchListTile(
+            value: _listOnline && enabled,
+            onChanged: enabled
+                ? (value) => setState(() => _listOnline = value)
+                : null,
+            title: Row(
+              children: [
+                Text('List on Online Store'),
+                if (!enabled) ...[
+                  SizedBox(width: 8),
+                  Icon(Iconsax.lock, size: 16, color: Colors.grey),
+                ],
+              ],
+            ),
+            subtitle: Text(
+              enabled
+                  ? 'Make this product available in your online store'
+                  : 'Enable online store in Business Settings first',
+              style: TextStyle(
+                fontSize: 12,
+                color: enabled ? null : Colors.grey,
+              ),
+            ),
+            secondary: Icon(
+              enabled ? Iconsax.global : Iconsax.shop,
+              color: enabled && _listOnline
+                  ? (isDark ? Colors.green[400] : Colors.green[700])
+                  : Colors.grey,
+            ),
+          ),
+        );
+      });
+    } catch (e) {
+      // If BusinessSettingsController is not found, show disabled toggle
+      return Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppColors.darkSurfaceVariant : Colors.grey[300]!,
+          ),
+        ),
+        child: SwitchListTile(
+          value: false,
+          onChanged: null,
+          title: Row(
+            children: [
+              Text('List on Online Store'),
+              SizedBox(width: 8),
+              Icon(Iconsax.lock, size: 16, color: Colors.grey),
+            ],
+          ),
+          subtitle: Text(
+            'Enable online store in Business Settings first',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          secondary: Icon(Iconsax.shop, color: Colors.grey),
+        ),
+      );
+    }
   }
 
   Widget _buildVariantsStep(bool isDark, bool isMobile) {
@@ -1566,6 +1658,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
             : _barcodeController.text,
         unit: _selectedUnit,
         trackInventory: _trackInventory,
+        listedOnline: _listOnline,
         costPrice: _costPriceController.text.isEmpty
             ? null
             : double.tryParse(_costPriceController.text),
@@ -1576,32 +1669,27 @@ class _AddProductDialogState extends State<AddProductDialog> {
       try {
         if (widget.product != null) {
           await controller.updateProduct(product);
-          Get.back(); // Close loading
-          Get.back(); // Close dialog
-          Get.snackbar(
-            'Success',
-            'Product updated successfully',
-            backgroundColor: Colors.green,
-            colorText: Colors.white,
-          );
         } else {
           await controller.addProduct(product);
-          Get.back(); // Close loading
-          Get.back(); // Close dialog
-          Get.snackbar(
-            'Success',
-            'Product added successfully',
-            backgroundColor: Colors.green,
-            colorText: Colors.white,
-          );
         }
+
+        // Close loading dialog
+        Get.back();
+        // Close main dialog
+        Get.back();
       } catch (e) {
-        Get.back(); // Close loading
-        Get.snackbar(
-          'Error',
-          'Failed to save product: $e',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
+        // Close loading dialog
+        Get.back();
+
+        // Show error dialog instead of snackbar
+        Get.dialog(
+          AlertDialog(
+            title: Text('Error'),
+            content: Text('Failed to save product: $e'),
+            actions: [
+              TextButton(onPressed: () => Get.back(), child: Text('OK')),
+            ],
+          ),
         );
       }
     }

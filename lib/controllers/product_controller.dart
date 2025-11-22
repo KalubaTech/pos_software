@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../models/product_model.dart';
 import '../services/database_service.dart';
 import 'universal_sync_controller.dart';
+import 'business_settings_controller.dart';
 
 class ProductController extends GetxController {
   final DatabaseService _dbService = Get.find<DatabaseService>();
@@ -32,7 +33,7 @@ class ProductController extends GetxController {
       products.value = result;
       filteredProducts.value = result;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load products: $e');
+      print('Error loading products: $e');
     } finally {
       isLoading.value = false;
     }
@@ -65,38 +66,86 @@ class ProductController extends GetxController {
 
   Future<bool> addProduct(ProductModel product) async {
     try {
+      print('📦 Adding product: ${product.name}');
+      print('   - Listed Online: ${product.listedOnline}');
+
+      // Try to get sync controller if not already available
+      if (_syncController == null) {
+        try {
+          _syncController = Get.find<UniversalSyncController>();
+          print('✅ ProductController: Universal sync connected (late)');
+        } catch (e) {
+          print('⚠️ ProductController: Sync still not available');
+        }
+      }
+
+      print(
+        '   - Sync Controller: ${_syncController != null ? "Available" : "NULL"}',
+      );
+
       final id = await _dbService.insertProduct(product);
       if (id > 0) {
         await fetchProducts();
 
         // Sync to cloud via UniversalSyncController
-        _syncController?.syncProduct(product);
+        if (_syncController != null) {
+          print('🔄 Calling syncProduct...');
+          _syncController?.syncProduct(product);
+        } else {
+          print('⚠️ Cannot sync - UniversalSyncController is NULL');
+        }
 
-        Get.snackbar('Success', 'Product added successfully');
+        // Update online product count
+        _updateOnlineProductCount();
+
         return true;
       }
       return false;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add product: $e');
+      print('Error adding product: $e');
       return false;
     }
   }
 
   Future<bool> updateProduct(ProductModel product) async {
     try {
+      print('📦 Updating product: ${product.name}');
+      print('   - Listed Online: ${product.listedOnline}');
+
+      // Try to get sync controller if not already available
+      if (_syncController == null) {
+        try {
+          _syncController = Get.find<UniversalSyncController>();
+          print('✅ ProductController: Universal sync connected (late)');
+        } catch (e) {
+          print('⚠️ ProductController: Sync still not available');
+        }
+      }
+
+      print(
+        '   - Sync Controller: ${_syncController != null ? "Available" : "NULL"}',
+      );
+
       final count = await _dbService.updateProduct(product);
       if (count > 0) {
         await fetchProducts();
 
         // Sync to cloud via UniversalSyncController
-        _syncController?.syncProduct(product);
+        if (_syncController != null) {
+          print('🔄 Calling syncProduct...');
+          _syncController?.syncProduct(product);
+        } else {
+          print('⚠️ Cannot sync - UniversalSyncController is NULL');
+        }
 
-        Get.snackbar('Success', 'Product updated successfully');
+        // Update online product count
+        _updateOnlineProductCount();
+
         return true;
       }
       return false;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update product: $e');
+      print('Error updating product: $e');
       return false;
     }
   }
@@ -110,13 +159,26 @@ class ProductController extends GetxController {
         // Sync deletion to cloud via UniversalSyncController
         _syncController?.deleteProductFromCloud(id);
 
-        Get.snackbar('Success', 'Product deleted successfully');
+        // Update online product count
+        _updateOnlineProductCount();
+
         return true;
       }
       return false;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete product: $e');
+      print('Error deleting product: $e');
       return false;
+    }
+  }
+
+  void _updateOnlineProductCount() {
+    try {
+      final settingsController = Get.find<BusinessSettingsController>();
+      final onlineCount = products.where((p) => p.listedOnline).length;
+      settingsController.updateOnlineProductCount(onlineCount);
+    } catch (e) {
+      // BusinessSettingsController not available yet
+      print('⚠️ ProductController: Could not update online product count');
     }
   }
 }

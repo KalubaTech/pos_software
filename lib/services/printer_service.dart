@@ -766,18 +766,38 @@ class PrinterService extends GetxController {
       ),
     ]);
 
-    bytes += generator.row([
-      PosColumn(
-        text: 'Tax:',
-        width: 6,
-        styles: PosStyles(align: PosAlign.left),
-      ),
-      PosColumn(
-        text: CurrencyFormatter.format(receipt.tax),
-        width: 6,
-        styles: PosStyles(align: PosAlign.right),
-      ),
-    ]);
+    // Show tax only if enabled and > 0
+    if (receipt.tax > 0) {
+      try {
+        final settings = Get.find<BusinessSettingsController>();
+        bytes += generator.row([
+          PosColumn(
+            text: '${settings.taxName.value}:',
+            width: 6,
+            styles: PosStyles(align: PosAlign.left),
+          ),
+          PosColumn(
+            text: CurrencyFormatter.format(receipt.tax),
+            width: 6,
+            styles: PosStyles(align: PosAlign.right),
+          ),
+        ]);
+      } catch (e) {
+        // Fallback to "Tax:" if settings not available
+        bytes += generator.row([
+          PosColumn(
+            text: 'Tax:',
+            width: 6,
+            styles: PosStyles(align: PosAlign.left),
+          ),
+          PosColumn(
+            text: CurrencyFormatter.format(receipt.tax),
+            width: 6,
+            styles: PosStyles(align: PosAlign.right),
+          ),
+        ]);
+      }
+    }
 
     if (receipt.discount > 0) {
       bytes += generator.row([

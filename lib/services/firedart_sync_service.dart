@@ -31,6 +31,12 @@ class FiredartSyncService extends GetxController {
   String? _businessId;
   String? _deviceId;
 
+  // Public getter for business ID
+  String? get businessId => _businessId;
+
+  // Public getter for Firestore instance (needed for direct queries during login)
+  Firestore get firestore => _firestore;
+
   // Collection listeners
   final Map<String, StreamSubscription> _listeners = {};
 
@@ -139,9 +145,19 @@ class FiredartSyncService extends GetxController {
   Future<void> pushToCloud(
     String collection,
     String documentId,
-    Map<String, dynamic> data,
-  ) async {
-    if (_businessId == null) {
+    Map<String, dynamic> data, {
+    bool isTopLevel = false, // For collections not under businesses/{id}/
+  }) async {
+    print('🔍 === pushToCloud DEBUG ===');
+    print('   Collection: $collection');
+    print('   Document ID: $documentId');
+    print('   Business ID: $_businessId');
+    print('   Online: ${isOnline.value}');
+    print('   Top Level: $isTopLevel');
+    print('   Data keys: ${data.keys.join(", ")}');
+
+    // For top-level collections, business ID is not required
+    if (!isTopLevel && _businessId == null) {
       print('⚠️ Business ID not set, cannot sync');
       return;
     }
@@ -158,6 +174,7 @@ class FiredartSyncService extends GetxController {
     };
 
     if (!isOnline.value) {
+      print('📝 Offline - adding to queue');
       _addToQueue(SyncOperation.create, collection, documentId, syncData);
       return;
     }
@@ -165,15 +182,65 @@ class FiredartSyncService extends GetxController {
     try {
       isSyncing.value = true;
 
-      final path = 'businesses/$_businessId/$collection';
+      final path = isTopLevel
+          ? collection
+          : 'businesses/$_businessId/$collection';
+      print('📤 Firestore path: $path');
+      print('📤 Writing document: $documentId');
+
       await _firestore.collection(path).document(documentId).set(syncData);
 
       lastSyncTime.value = DateTime.now();
       print('✅ Pushed $collection/$documentId to cloud');
+      print('✅ Full path: $path/$documentId');
     } catch (e) {
       print('❌ Failed to push to cloud: $e');
+      print('❌ Error type: ${e.runtimeType}');
       syncErrors.add('Push failed: $e');
       _addToQueue(SyncOperation.create, collection, documentId, syncData);
+    } finally {
+      isSyncing.value = false;
+    }
+  }
+
+  /// Update specific fields in a document (partial update)
+  Future<void> updateCloud(
+    String collection,
+    String documentId,
+    Map<String, dynamic> fields, {
+    bool isTopLevel = false,
+  }) async {
+    // For top-level collections, business ID is not required
+    if (!isTopLevel && _businessId == null) {
+      print('⚠️ Business ID not set, cannot update');
+      return;
+    }
+
+    if (!isOnline.value) {
+      print('📝 Offline - adding to queue');
+      _addToQueue(SyncOperation.update, collection, documentId, fields);
+      return;
+    }
+
+    try {
+      isSyncing.value = true;
+
+      final path = isTopLevel
+          ? collection
+          : 'businesses/$_businessId/$collection';
+
+      print('🔄 Updating document: $path/$documentId');
+      print('🔄 Fields: ${fields.keys.join(', ')}');
+
+      // Use update instead of set to preserve existing fields
+      await _firestore.collection(path).document(documentId).update(fields);
+
+      lastSyncTime.value = DateTime.now();
+      print('✅ Updated $collection/$documentId in cloud');
+    } catch (e) {
+      print('❌ Failed to update cloud: $e');
+      syncErrors.add('Update failed: $e');
+      _addToQueue(SyncOperation.update, collection, documentId, fields);
     } finally {
       isSyncing.value = false;
     }
@@ -221,6 +288,88 @@ class FiredartSyncService extends GetxController {
         return {'id': doc.id, ...doc.map};
       }).toList();
     });
+  }
+
+  /// Get all documents from a collection (for manual sync)
+  Future<List<Map<String, dynamic>>> getCollectionData(
+    String collection,
+  ) async {
+    if (_businessId == null) {
+      throw Exception('Business ID not set');
+    }
+
+    try {
+      final path = 'businesses/$_businessId/$collection';
+      final documents = await _firestore.collection(path).get();
+
+      return documents.map((doc) {
+        return {'id': doc.id, ...doc.map};
+      }).toList();
+    } catch (e) {
+      print('❌ Error fetching collection $collection: $e');
+      return [];
+    }
+  }
+
+  /// Get all documents from a top-level collection (not under businesses/{id})
+  Future<List<Map<String, dynamic>>> getTopLevelCollectionData(
+    String collection,
+  ) async {
+    try {
+      final documents = await _firestore.collection(collection).get();
+
+      return documents.map((doc) {
+        return {'id': doc.id, ...doc.map};
+      }).toList();
+    } catch (e) {
+      print('❌ Error fetching top-level collection $collection: $e');
+      return [];
+    }
+  }
+
+  /// Get a single document from a collection
+  Future<Map<String, dynamic>?> getDocument(
+    String collection,
+    String documentId,
+  ) async {
+    try {
+      // For top-level collections (like business_registrations)
+      final doc = await _firestore
+          .collection(collection)
+          .document(documentId)
+          .get();
+
+      if (doc.map.isNotEmpty) {
+        return {'id': doc.id, ...doc.map};
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error fetching document $collection/$documentId: $e');
+      return null;
+    }
+  }
+
+  /// Get a document from a business sub-collection
+  Future<Map<String, dynamic>?> getBusinessDocument(
+    String collection,
+    String documentId,
+  ) async {
+    if (_businessId == null) {
+      throw Exception('Business ID not set');
+    }
+
+    try {
+      final path = 'businesses/$_businessId/$collection';
+      final doc = await _firestore.collection(path).document(documentId).get();
+
+      if (doc.map.isNotEmpty) {
+        return {'id': doc.id, ...doc.map};
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error fetching business document $collection/$documentId: $e');
+      return null;
+    }
   }
 
   /// Add operation to offline queue

@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'dart:ui';
 import '../../controllers/dashboard_controller.dart';
 import '../../controllers/appearance_controller.dart';
+import '../../models/transaction_model.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../utils/responsive.dart';
@@ -1265,104 +1266,110 @@ class DashboardView extends StatelessWidget {
               );
             }
 
-            return Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.grey.shade100,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(1),
-                  1: FlexColumnWidth(2),
-                  2: FlexColumnWidth(1.5),
-                  3: FlexColumnWidth(1),
-                  4: FlexColumnWidth(1),
-                  5: IntrinsicColumnWidth(),
-                },
-                children: [
-                  TableRow(
+            // Mobile: Card-based list, Desktop: Table
+            return context.isMobile
+                ? _buildMobileTransactionsList(context, controller, isDark)
+                : Container(
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.darkSurfaceVariant
-                          : Colors.grey.shade50,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.08)
+                            : Colors.grey.shade100,
                       ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    children: [
-                      _buildTableHeader('ID', isDark),
-                      _buildTableHeader('Date & Time', isDark),
-                      _buildTableHeader('Customer', isDark),
-                      _buildTableHeader('Method', isDark),
-                      _buildTableHeader('Total', isDark),
-                      _buildTableHeader('', isDark),
-                    ],
-                  ),
-                  ...controller.recentTransactions.map((transaction) {
-                    return TableRow(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: AppColors.getDivider(isDark),
-                            width: 1,
-                          ),
-                        ),
-                      ),
+                    child: Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(1),
+                        1: FlexColumnWidth(2),
+                        2: FlexColumnWidth(1.5),
+                        3: FlexColumnWidth(1),
+                        4: FlexColumnWidth(1),
+                        5: IntrinsicColumnWidth(),
+                      },
                       children: [
-                        _buildTableCell(transaction.id, isDark),
-                        _buildTableCell(
-                          DateFormat(
-                            'MMM dd, hh:mm a',
-                          ).format(transaction.transactionDate),
-                          isDark,
-                        ),
-                        _buildTableCell(
-                          transaction.customerName ?? 'Guest',
-                          isDark,
-                        ),
-                        _buildTableCellWithBadge(
-                          transaction.paymentMethod.name.toUpperCase(),
-                          isDark,
-                        ),
-                        _buildTableCell(
-                          CurrencyFormatter.format(transaction.total),
-                          isDark,
-                          bold: true,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8.0,
-                            horizontal: 8.0,
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Iconsax.eye,
-                              size: 18,
-                              color: AppColors.primary,
+                        TableRow(
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.darkSurfaceVariant
+                                : Colors.grey.shade50,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              topRight: Radius.circular(12),
                             ),
-                            onPressed: () {
-                              // TODO: Implement view transaction details action
-                            },
-                            tooltip: 'View Details',
-                            style: IconButton.styleFrom(
-                              backgroundColor: AppColors.primary.withOpacity(
-                                0.1,
+                          ),
+                          children: [
+                            _buildTableHeader('ID', isDark),
+                            _buildTableHeader('Date & Time', isDark),
+                            _buildTableHeader('Customer', isDark),
+                            _buildTableHeader('Method', isDark),
+                            _buildTableHeader('Total', isDark),
+                            _buildTableHeader('', isDark),
+                          ],
+                        ),
+                        ...controller.recentTransactions.map((transaction) {
+                          return TableRow(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: AppColors.getDivider(isDark),
+                                  width: 1,
+                                ),
                               ),
-                              padding: const EdgeInsets.all(8),
                             ),
-                          ),
-                        ),
+                            children: [
+                              _buildTableCell(transaction.id, isDark),
+                              _buildTableCell(
+                                DateFormat(
+                                  'MMM dd, hh:mm a',
+                                ).format(transaction.transactionDate),
+                                isDark,
+                              ),
+                              _buildTableCell(
+                                transaction.customerName ?? 'Guest',
+                                isDark,
+                              ),
+                              _buildTableCellWithBadge(
+                                transaction.paymentMethod.name.toUpperCase(),
+                                isDark,
+                              ),
+                              _buildTableCell(
+                                CurrencyFormatter.format(transaction.total),
+                                isDark,
+                                bold: true,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                  horizontal: 8.0,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Iconsax.eye,
+                                    size: 18,
+                                    color: AppColors.primary,
+                                  ),
+                                  onPressed: () {
+                                    _showTransactionDetails(
+                                      context,
+                                      transaction,
+                                      isDark,
+                                    );
+                                  },
+                                  tooltip: 'View Details',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: AppColors.primary
+                                        .withOpacity(0.1),
+                                    padding: const EdgeInsets.all(8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
                       ],
-                    );
-                  }).toList(),
-                ],
-              ),
-            );
+                    ),
+                  );
           }),
         ],
       ),
@@ -1441,6 +1448,539 @@ class DashboardView extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
+      ),
+    );
+  }
+
+  // Mobile-friendly transaction list
+  Widget _buildMobileTransactionsList(
+    BuildContext context,
+    DashboardController controller,
+    bool isDark,
+  ) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: controller.recentTransactions.length,
+      itemBuilder: (context, index) {
+        final transaction = controller.recentTransactions[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.grey.shade200,
+            ),
+          ),
+          color: isDark ? AppColors.darkSurface : Colors.white,
+          child: InkWell(
+            onTap: () => _showTransactionDetails(context, transaction, isDark),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header row: ID and Total
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    (isDark
+                                            ? AppColors.darkPrimary
+                                            : AppColors.primary)
+                                        .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _formatTransactionId(transaction.id),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildMobilePaymentBadge(
+                              transaction.paymentMethod.name.toUpperCase(),
+                              isDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        CurrencyFormatter.format(transaction.total),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Customer and date info
+                  Row(
+                    children: [
+                      Icon(
+                        Iconsax.user,
+                        size: 14,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          transaction.customerName ?? 'Guest',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.getTextSecondary(isDark),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Iconsax.clock,
+                        size: 14,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        DateFormat(
+                          'MMM dd, yyyy • hh:mm a',
+                        ).format(transaction.transactionDate),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.getTextSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Tap to view details indicator
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Tap for details',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.getTextSecondary(isDark),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Iconsax.arrow_right_3,
+                        size: 12,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMobilePaymentBadge(String method, bool isDark) {
+    Color badgeColor;
+    switch (method.toUpperCase()) {
+      case 'CASH':
+        badgeColor = isDark ? AppColors.darkSecondary : AppColors.secondary;
+        break;
+      case 'CARD':
+        badgeColor = isDark ? AppColors.darkPrimary : AppColors.primary;
+        break;
+      case 'MOBILE':
+        badgeColor = isDark
+            ? AppColors.darkSecondaryVariant
+            : AppColors.secondaryVariant;
+        break;
+      default:
+        badgeColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: badgeColor.withOpacity(0.3), width: 1),
+      ),
+      child: Text(
+        method,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: badgeColor,
+        ),
+      ),
+    );
+  }
+
+  // Show transaction details in a dialog
+  void _showTransactionDetails(
+    BuildContext context,
+    TransactionModel transaction,
+    bool isDark,
+  ) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: context.isMobile ? double.infinity : 500,
+            maxHeight: context.isMobile
+                ? MediaQuery.of(context).size.height * 0.8
+                : 600,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                      .withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.darkPrimary
+                            : AppColors.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Iconsax.receipt_text,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Transaction Details',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.getTextPrimary(isDark),
+                            ),
+                          ),
+                          Text(
+                            '#${transaction.id}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.getTextSecondary(isDark),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Iconsax.close_circle,
+                        color: AppColors.getTextSecondary(isDark),
+                      ),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Transaction info cards
+                      _buildDetailRow(
+                        'Date & Time',
+                        DateFormat(
+                          'MMMM dd, yyyy • hh:mm a',
+                        ).format(transaction.transactionDate),
+                        Iconsax.calendar,
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        'Customer',
+                        transaction.customerName ?? 'Guest',
+                        Iconsax.user,
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        'Payment Method',
+                        transaction.paymentMethod.name.toUpperCase(),
+                        Iconsax.wallet_3,
+                        isDark,
+                      ),
+                      const SizedBox(height: 20),
+                      // Total amount card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color:
+                              (isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary)
+                                  .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                (isDark
+                                        ? AppColors.darkPrimary
+                                        : AppColors.primary)
+                                    .withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total Amount',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.getTextPrimary(isDark),
+                              ),
+                            ),
+                            Text(
+                              CurrencyFormatter.format(transaction.total),
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? AppColors.darkPrimary
+                                    : AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Items section (if items are available)
+                      if (transaction.items.isNotEmpty) ...[
+                        Text(
+                          'Items (${transaction.items.length})',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.getTextPrimary(isDark),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...transaction.items.map((item) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.darkSurfaceVariant
+                                  : Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.displayName,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.getTextPrimary(
+                                            isDark,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Qty: ${item.quantity}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.getTextSecondary(
+                                            isDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  CurrencyFormatter.format(item.subtotal),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.getTextPrimary(isDark),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              // Footer buttons
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: AppColors.getDivider(isDark)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => Get.back(),
+                        icon: Icon(Iconsax.close_square, size: 18),
+                        label: Text('Close'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: AppColors.getDivider(isDark)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: Implement print receipt
+                          Get.back();
+                        },
+                        icon: Icon(Iconsax.printer, size: 18),
+                        label: Text('Print'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark
+                              ? AppColors.darkPrimary
+                              : AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to format transaction ID for mobile display
+  String _formatTransactionId(String id) {
+    // If ID is short enough, show it all
+    if (id.length <= 8) return '#$id';
+
+    // Otherwise show first 4 and last 4 characters with ellipsis
+    final first = id.substring(0, 4);
+    final last = id.substring(id.length - 4);
+    return '#$first...$last';
+  }
+
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    IconData icon,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurfaceVariant : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: (isDark ? AppColors.darkPrimary : AppColors.primary)
+                  .withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isDark ? AppColors.darkPrimary : AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.getTextSecondary(isDark),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.getTextPrimary(isDark),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

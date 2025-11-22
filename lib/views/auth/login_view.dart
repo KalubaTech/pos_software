@@ -180,32 +180,42 @@ class _LoginViewState extends State<LoginView> {
         final isFilled = index < enteredPin.length;
         final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
 
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 200),
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isFilled
-                  ? primaryColor
-                  : (isDark ? AppColors.darkSurfaceVariant : Colors.grey[200]),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              constraints: BoxConstraints(
+                maxWidth: 60,
+                minWidth: 40,
+                maxHeight: 60,
+                minHeight: 40,
+              ),
+              width: double.infinity,
+              height: 60,
+              decoration: BoxDecoration(
                 color: isFilled
                     ? primaryColor
                     : (isDark
                           ? AppColors.darkSurfaceVariant
-                          : Colors.grey[300]!),
-                width: 2,
+                          : Colors.grey[200]),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isFilled
+                      ? primaryColor
+                      : (isDark
+                            ? AppColors.darkSurfaceVariant
+                            : Colors.grey[300]!),
+                  width: 2,
+                ),
               ),
-            ),
-            child: Center(
-              child: Text(
-                isFilled ? '●' : '',
-                style: TextStyle(
-                  fontSize: 32,
-                  color: isDark ? AppColors.darkTextPrimary : Colors.white,
+              child: Center(
+                child: Text(
+                  isFilled ? '●' : '',
+                  style: TextStyle(
+                    fontSize: 32,
+                    color: isDark ? AppColors.darkTextPrimary : Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -233,11 +243,15 @@ class _LoginViewState extends State<LoginView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: numbers.map((number) {
-        if (number.isEmpty) return SizedBox(width: 80);
+        if (number.isEmpty) {
+          return Expanded(child: SizedBox());
+        }
 
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          child: _buildNumPadButton(number, isDark),
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: _buildNumPadButton(number, isDark),
+          ),
         );
       }).toList(),
     );
@@ -250,7 +264,13 @@ class _LoginViewState extends State<LoginView> {
       onTap: isLoading ? null : () => _handleNumPadTap(value),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: 80,
+        constraints: BoxConstraints(
+          maxWidth: 80,
+          minWidth: 60,
+          minHeight: 60,
+          maxHeight: 80,
+        ),
+        width: double.infinity,
         height: 80,
         decoration: BoxDecoration(
           color: isBackspace
@@ -296,15 +316,23 @@ class _LoginViewState extends State<LoginView> {
   }
 
   Future<void> _attemptLogin() async {
+    if (!mounted) return; // Early exit if widget is disposed
+
     setState(() => isLoading = true);
 
     await Future.delayed(Duration(milliseconds: 500)); // Smooth animation
 
     final success = await authController.login(enteredPin);
 
-    setState(() {
-      isLoading = false;
-      if (!success) {
+    if (!mounted) return; // Check before setState
+
+    if (success) {
+      // Login successful - go directly to dashboard
+      if (!mounted) return;
+      Get.offAllNamed('/dashboard');
+    } else {
+      setState(() {
+        isLoading = false;
         enteredPin = '';
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -314,8 +342,8 @@ class _LoginViewState extends State<LoginView> {
             duration: Duration(seconds: 2),
           ),
         );
-      }
-    });
+      });
+    }
   }
 
   Widget _buildQuickLoginSection(bool isDark) {
@@ -355,71 +383,6 @@ class _LoginViewState extends State<LoginView> {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickLoginCard(cashier, bool isDark) {
-    final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          enteredPin = cashier.pin;
-          _attemptLogin();
-        });
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 100,
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkSurface.withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark
-                ? AppColors.darkSurfaceVariant
-                : Colors.white.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-              child: Text(
-                cashier.name[0],
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              cashier.name.split(' ')[0],
-              style: TextStyle(
-                color: isDark ? AppColors.darkTextPrimary : Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              cashier.role.displayName.toUpperCase(),
-              style: TextStyle(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : Colors.white.withValues(alpha: 0.7),
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -23,6 +23,7 @@ class CashierModel {
   final bool isActive;
   final DateTime createdAt;
   final DateTime? lastLogin;
+  final String? businessId; // Business this cashier belongs to
 
   CashierModel({
     required this.id,
@@ -34,6 +35,7 @@ class CashierModel {
     this.isActive = true,
     required this.createdAt,
     this.lastLogin,
+    this.businessId,
   });
 
   factory CashierModel.fromJson(Map<String, dynamic> json) {
@@ -47,11 +49,12 @@ class CashierModel {
         orElse: () => UserRole.cashier,
       ),
       profileImageUrl: json['profileImageUrl'],
-      isActive: json['isActive'] ?? true,
+      isActive: json['isActive'] == 1 || json['isActive'] == true,
       createdAt: DateTime.parse(json['createdAt']),
       lastLogin: json['lastLogin'] != null
           ? DateTime.parse(json['lastLogin'])
           : null,
+      businessId: json['businessId'],
     );
   }
 
@@ -66,6 +69,23 @@ class CashierModel {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'lastLogin': lastLogin?.toIso8601String(),
+      'businessId': businessId,
+    };
+  }
+
+  /// Convert to SQLite-compatible format (bool -> int)
+  Map<String, dynamic> toSQLite() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'pin': pin,
+      'role': role.name,
+      'profileImageUrl': profileImageUrl,
+      'isActive': isActive ? 1 : 0, // SQLite: bool -> int
+      'createdAt': createdAt.toIso8601String(),
+      'lastLogin': lastLogin?.toIso8601String(),
+      'businessId': businessId,
     };
   }
 
@@ -79,6 +99,7 @@ class CashierModel {
     bool? isActive,
     DateTime? createdAt,
     DateTime? lastLogin,
+    String? businessId,
   }) {
     return CashierModel(
       id: id ?? this.id,
@@ -90,6 +111,7 @@ class CashierModel {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       lastLogin: lastLogin ?? this.lastLogin,
+      businessId: businessId ?? this.businessId,
     );
   }
 }

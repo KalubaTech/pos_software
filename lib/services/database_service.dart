@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert'; // ✅ Add for jsonEncode/jsonDecode
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
@@ -12,7 +13,7 @@ import '../models/price_tag_template_model.dart';
 class DatabaseService extends GetxController {
   static Database? _database;
   static const String _databaseName = 'pos_software.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 4;
 
   // Table names
   static const String productsTable = 'products';
@@ -71,6 +72,7 @@ class DatabaseService extends GetxController {
         trackInventory INTEGER DEFAULT 1,
         lastRestocked TEXT,
         costPrice REAL,
+        listedOnline INTEGER DEFAULT 0,
         createdAt TEXT,
         updatedAt TEXT
       )
@@ -198,7 +200,8 @@ class DatabaseService extends GetxController {
         profileImageUrl TEXT,
         isActive INTEGER DEFAULT 1,
         createdAt TEXT NOT NULL,
-        lastLogin TEXT
+        lastLogin TEXT,
+        businessId TEXT
       )
     ''');
 
@@ -286,6 +289,20 @@ class DatabaseService extends GetxController {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_cashiers_email ON $cashiersTable(email)',
       );
+    }
+
+    if (oldVersion < 3) {
+      // Add listedOnline column to products table
+      await db.execute('''
+        ALTER TABLE $productsTable ADD COLUMN listedOnline INTEGER DEFAULT 0
+      ''');
+    }
+
+    if (oldVersion < 4) {
+      // Add businessId column to cashiers table
+      await db.execute('''
+        ALTER TABLE $cashiersTable ADD COLUMN businessId TEXT
+      ''');
     }
   }
 
@@ -688,6 +705,7 @@ class DatabaseService extends GetxController {
       'trackInventory': product.trackInventory ? 1 : 0,
       'lastRestocked': product.lastRestocked?.toIso8601String(),
       'costPrice': product.costPrice,
+      'listedOnline': product.listedOnline ? 1 : 0,
       'updatedAt': DateTime.now().toIso8601String(),
     };
   }
@@ -720,6 +738,7 @@ class DatabaseService extends GetxController {
           ? DateTime.parse(map['lastRestocked'])
           : null,
       costPrice: map['costPrice'],
+      listedOnline: map['listedOnline'] == 1,
     );
   }
 
@@ -934,7 +953,9 @@ class DatabaseService extends GetxController {
       'name': template.name,
       'width': template.width,
       'height': template.height,
-      'elements': template.toJson()['elements'].toString(),
+      'elements': jsonEncode(
+        template.toJson()['elements'],
+      ), // ✅ JSON encode the list
       'createdAt': template.createdAt.toIso8601String(),
       'updatedAt': template.updatedAt.toIso8601String(),
     };
@@ -946,7 +967,9 @@ class DatabaseService extends GetxController {
       'name': map['name'],
       'width': map['width'],
       'height': map['height'],
-      'elements': map['elements'],
+      'elements': jsonDecode(
+        map['elements'],
+      ), // ✅ JSON decode the string back to list
       'createdAt': map['createdAt'],
       'updatedAt': map['updatedAt'],
     });
@@ -1029,9 +1052,15 @@ class DatabaseService extends GetxController {
   Future<int> insertCashier(Map<String, dynamic> cashier) async {
     final db = await database;
     try {
+      // Convert boolean to int for SQLite compatibility
+      final sqliteCashier = Map<String, dynamic>.from(cashier);
+      if (sqliteCashier['isActive'] is bool) {
+        sqliteCashier['isActive'] = (sqliteCashier['isActive'] as bool) ? 1 : 0;
+      }
+
       await db.insert(
         cashiersTable,
-        cashier,
+        sqliteCashier,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       return 1;
@@ -1068,6 +1097,71 @@ class DatabaseService extends GetxController {
     );
     if (maps.isEmpty) return null;
     return maps.first;
+  }
+
+  Future<Map<String, dynamic>?> getCashierByEmailAndPin(
+    String email,
+    String pin,
+  ) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      cashiersTable,
+      where: 'email = ? AND pin = ? AND isActive = ?',
+      whereArgs: [email, pin, 1],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<Map<String, dynamic>?> getCashierByEmail(String email) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      cashiersTable,
+      where: 'email = ?',
+      whereArgs: [email],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<bool> isPinUnique(String pin, {String? excludeId}) async {
+    final db = await database;
+    String where = 'pin = ?';
+    List<dynamic> whereArgs = [pin];
+
+    if (excludeId != null) {
+      where += ' AND id != ?';
+      whereArgs.add(excludeId);
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      cashiersTable,
+      where: where,
+      whereArgs: whereArgs,
+    );
+
+    return maps.isEmpty;
+  }
+
+  Future<bool> isEmailUnique(String email, {String? excludeId}) async {
+    final db = await database;
+    String where = 'email = ?';
+    List<dynamic> whereArgs = [email];
+
+    if (excludeId != null) {
+      where += ' AND id != ?';
+      whereArgs.add(excludeId);
+    }
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      cashiersTable,
+      where: where,
+      whereArgs: whereArgs,
+    );
+
+    return maps.isEmpty;
   }
 
   Future<int> updateCashier(String id, Map<String, dynamic> cashier) async {

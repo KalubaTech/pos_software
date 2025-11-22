@@ -23,20 +23,33 @@ class WalletModel {
        updatedAt = updatedAt ?? DateTime.now();
 
   factory WalletModel.fromJson(Map<String, dynamic> json) {
+    // Handle both snake_case (from database) and camelCase (from Firestore)
+    final businessId =
+        (json['business_id'] ?? json['businessId'] ?? '') as String;
+    final businessName =
+        (json['business_name'] ?? json['businessName'] ?? '') as String;
+
     return WalletModel(
       id: json['id'] as int?,
-      businessId: json['business_id'] as String,
-      businessName: json['business_name'] as String,
+      businessId: businessId,
+      businessName: businessName,
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'USD',
-      status: json['status'] as String? ?? 'active',
-      isEnabled: json['is_enabled'] == 1 || json['is_enabled'] == true,
+      currency: (json['currency'] as String?) ?? 'USD',
+      status: (json['status'] as String?) ?? 'active',
+      isEnabled:
+          json['is_enabled'] == 1 ||
+          json['is_enabled'] == true ||
+          json['isEnabled'] == true,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
+          : (json['createdAt'] != null
+                ? DateTime.parse(json['createdAt'] as String)
+                : DateTime.now()),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
-          : DateTime.now(),
+          : (json['updatedAt'] != null
+                ? DateTime.parse(json['updatedAt'] as String)
+                : DateTime.now()),
     );
   }
 

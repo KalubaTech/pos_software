@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import '../../controllers/sync_controller.dart';
+import '../../controllers/universal_sync_controller.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../services/subscription_service.dart';
+import '../../services/firedart_sync_service.dart';
 import '../../utils/colors.dart';
 import '../../utils/responsive.dart';
+import 'package:intl/intl.dart';
 
 class SyncSettingsView extends StatelessWidget {
   const SyncSettingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(SyncController());
+    final syncController = Get.find<UniversalSyncController>();
     final appearanceController = Get.find<AppearanceController>();
     final subscriptionService = Get.find<SubscriptionService>();
+    final firedartSync = Get.find<FiredartSyncService>();
 
     return Obx(() {
       final isDark = appearanceController.isDarkMode.value;
@@ -29,20 +32,20 @@ class SyncSettingsView extends StatelessWidget {
         backgroundColor: isDark ? AppColors.darkBackground : Colors.grey[50],
         body: Column(
           children: [
-            _buildHeader(context, controller, isDark),
+            _buildHeader(context, syncController, firedartSync, isDark),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildStatusCard(controller, isDark),
+                    _buildStatusCard(syncController, firedartSync, isDark),
                     SizedBox(height: 24),
-                    _buildConfigurationCard(controller, isDark),
+                    _buildSyncedDataCard(syncController, isDark),
                     SizedBox(height: 24),
-                    _buildSyncStatsCard(controller, isDark),
+                    _buildActionsCard(syncController, firedartSync, isDark),
                     SizedBox(height: 24),
-                    _buildActionsCard(controller, isDark),
+                    _buildInfoCard(isDark),
                   ],
                 ),
               ),
@@ -55,7 +58,8 @@ class SyncSettingsView extends StatelessWidget {
 
   Widget _buildHeader(
     BuildContext context,
-    SyncController controller,
+    UniversalSyncController syncController,
+    FiredartSyncService firedartSync,
     bool isDark,
   ) {
     return Container(
@@ -83,11 +87,11 @@ class SyncSettingsView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Iconsax.refresh, color: Colors.white, size: 24),
+                    Icon(Iconsax.refresh_2, color: Colors.white, size: 24),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Data Sync',
+                        'Cloud Sync',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -97,7 +101,7 @@ class SyncSettingsView extends StatelessWidget {
                       ),
                     ),
                     Obx(() {
-                      if (controller.isSyncing) {
+                      if (syncController.isSyncing.value) {
                         return SizedBox(
                           width: 20,
                           height: 20,
@@ -110,7 +114,7 @@ class SyncSettingsView extends StatelessWidget {
                         );
                       }
                       return Icon(
-                        controller.isConfigured.value
+                        firedartSync.isOnline.value
                             ? Iconsax.tick_circle5
                             : Iconsax.warning_2,
                         color: Colors.white,
@@ -121,7 +125,7 @@ class SyncSettingsView extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Sync with external database',
+                  'Firebase Firestore • Real-time sync',
                   style: TextStyle(fontSize: 12, color: Colors.white70),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -136,11 +140,15 @@ class SyncSettingsView extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(Iconsax.refresh, color: Colors.white, size: 32),
+                          Icon(
+                            Iconsax.refresh_2,
+                            color: Colors.white,
+                            size: 32,
+                          ),
                           SizedBox(width: 16),
                           Expanded(
                             child: Text(
-                              'Data Sync',
+                              'Cloud Sync',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -153,7 +161,7 @@ class SyncSettingsView extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Sync transactions, products, and customers across devices',
+                        'Firebase Firestore • Real-time bidirectional synchronization',
                         style: TextStyle(fontSize: 14, color: Colors.white70),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 2,
@@ -163,7 +171,7 @@ class SyncSettingsView extends StatelessWidget {
                 ),
                 SizedBox(width: 16),
                 Obx(() {
-                  if (controller.isSyncing) {
+                  if (syncController.isSyncing.value) {
                     return SizedBox(
                       width: 24,
                       height: 24,
@@ -174,7 +182,7 @@ class SyncSettingsView extends StatelessWidget {
                     );
                   }
                   return Icon(
-                    controller.isConfigured.value
+                    firedartSync.isOnline.value
                         ? Iconsax.tick_circle5
                         : Iconsax.warning_2,
                     color: Colors.white,
@@ -186,7 +194,11 @@ class SyncSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusCard(SyncController controller, bool isDark) {
+  Widget _buildStatusCard(
+    UniversalSyncController syncController,
+    FiredartSyncService firedartSync,
+    bool isDark,
+  ) {
     return Card(
       color: AppColors.getSurfaceColor(isDark),
       elevation: isDark ? 8 : 2,
@@ -214,66 +226,142 @@ class SyncSettingsView extends StatelessWidget {
             ),
             SizedBox(height: 24),
             Obx(() {
-              final isConfigured = controller.isConfigured.value;
-              final isSyncing = controller.isSyncing;
-
-              return Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isConfigured ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    isConfigured
-                        ? (isSyncing ? 'Syncing...' : 'Configured & Ready')
-                        : 'Not Configured',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.getTextPrimary(isDark),
-                    ),
-                  ),
-                ],
-              );
-            }),
-            SizedBox(height: 16),
-            Obx(() {
-              final config = controller.config;
-              if (config == null) {
-                return Text(
-                  'Configure sync settings below to get started',
-                  style: TextStyle(color: AppColors.getTextSecondary(isDark)),
-                );
-              }
+              final isOnline = firedartSync.isOnline.value;
+              final isSyncing = syncController.isSyncing.value;
+              final businessId = firedartSync.businessId;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Connection Status
+                  Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isOnline ? Colors.green : Colors.red,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        isOnline ? 'Connected' : 'Offline',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.getTextPrimary(isDark),
+                        ),
+                      ),
+                      Spacer(),
+                      if (isSyncing)
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  isDark
+                                      ? AppColors.darkPrimary
+                                      : AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Syncing...',
+                              style: TextStyle(
+                                color: AppColors.getTextSecondary(isDark),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Divider(color: AppColors.getDivider(isDark)),
+                  SizedBox(height: 16),
+                  // Business ID
                   _buildInfoRow(
                     'Business ID',
-                    config.businessId,
+                    businessId ?? 'Not configured',
                     Iconsax.building,
                     isDark,
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 12),
+                  // Sync Provider
                   _buildInfoRow(
-                    'Auto Sync',
-                    config.autoSync ? 'Enabled' : 'Disabled',
-                    Iconsax.autobrightness,
+                    'Provider',
+                    'Firebase Firestore',
+                    Iconsax.cloud,
                     isDark,
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 12),
+                  // Sync Status
                   _buildInfoRow(
-                    'Sync Interval',
-                    '${config.syncIntervalMinutes} minutes',
-                    Iconsax.timer,
+                    'Status',
+                    syncController.syncStatus.value.isEmpty
+                        ? 'Ready'
+                        : syncController.syncStatus.value,
+                    Iconsax.info_circle,
                     isDark,
                   ),
+                  SizedBox(height: 16),
+                  // Last Sync Time
+                  Obx(() {
+                    final lastSync = firedartSync.lastSyncTime.value;
+                    if (lastSync != null) {
+                      final diff = DateTime.now().difference(lastSync);
+                      String timeAgo;
+                      if (diff.inMinutes < 1) {
+                        timeAgo = 'Just now';
+                      } else if (diff.inHours < 1) {
+                        timeAgo =
+                            '${diff.inMinutes} minute${diff.inMinutes > 1 ? "s" : ""} ago';
+                      } else if (diff.inDays < 1) {
+                        timeAgo =
+                            '${diff.inHours} hour${diff.inHours > 1 ? "s" : ""} ago';
+                      } else {
+                        timeAgo = DateFormat('MMM d, h:mm a').format(lastSync);
+                      }
+
+                      return Row(
+                        children: [
+                          Icon(
+                            Iconsax.clock,
+                            size: 16,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Last sync: ',
+                            style: TextStyle(
+                              color: AppColors.getTextSecondary(isDark),
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            timeAgo,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(isDark),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Text(
+                      'Never synced',
+                      style: TextStyle(
+                        color: AppColors.getTextSecondary(isDark),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    );
+                  }),
                 ],
               );
             }),
@@ -299,7 +387,7 @@ class SyncSettingsView extends StatelessWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Syncs: Transactions, Products, Customers & Inventory levels',
+                      'Real-time bidirectional sync with Firebase Firestore',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.getTextSecondary(isDark),
@@ -315,7 +403,10 @@ class SyncSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildConfigurationCard(SyncController controller, bool isDark) {
+  Widget _buildSyncedDataCard(
+    UniversalSyncController syncController,
+    bool isDark,
+  ) {
     return Card(
       color: AppColors.getSurfaceColor(isDark),
       elevation: isDark ? 8 : 2,
@@ -327,12 +418,12 @@ class SyncSettingsView extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Iconsax.setting_2,
+                  Iconsax.data,
                   color: isDark ? AppColors.darkPrimary : AppColors.primary,
                 ),
                 SizedBox(width: 12),
                 Text(
-                  'Configuration',
+                  'Synced Data',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -342,257 +433,52 @@ class SyncSettingsView extends StatelessWidget {
               ],
             ),
             SizedBox(height: 24),
-            Obx(
-              () => TextField(
-                controller:
-                    TextEditingController(
-                        text: controller.businessIdController.value,
-                      )
-                      ..selection = TextSelection.collapsed(
-                        offset: controller.businessIdController.value.length,
-                      ),
-                onChanged: (value) =>
-                    controller.businessIdController.value = value,
-                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                decoration: InputDecoration(
-                  labelText: 'Business ID *',
-                  labelStyle: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  hintText: 'e.g., BUS_12345',
-                  hintStyle: TextStyle(
-                    color: AppColors.getTextTertiary(isDark),
-                  ),
-                  prefixIcon: Icon(
-                    Iconsax.building,
-                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkSurfaceVariant
-                      : Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
+            _buildDataTypeRow(
+              'Products',
+              'Inventory, pricing, categories',
+              Iconsax.box,
+              Colors.blue,
+              isDark,
             ),
-            SizedBox(height: 16),
-            Obx(
-              () => TextField(
-                controller:
-                    TextEditingController(
-                        text: controller.apiUrlController.value,
-                      )
-                      ..selection = TextSelection.collapsed(
-                        offset: controller.apiUrlController.value.length,
-                      ),
-                onChanged: (value) => controller.apiUrlController.value = value,
-                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                decoration: InputDecoration(
-                  labelText: 'API Base URL',
-                  labelStyle: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  hintText: 'https://api.yourserver.com',
-                  hintStyle: TextStyle(
-                    color: AppColors.getTextTertiary(isDark),
-                  ),
-                  prefixIcon: Icon(
-                    Iconsax.global,
-                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkSurfaceVariant
-                      : Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
+            SizedBox(height: 12),
+            _buildDataTypeRow(
+              'Transactions',
+              'Sales, receipts, payments',
+              Iconsax.receipt,
+              Colors.green,
+              isDark,
             ),
-            SizedBox(height: 16),
-            Obx(
-              () => TextField(
-                controller:
-                    TextEditingController(
-                        text: controller.apiKeyController.value,
-                      )
-                      ..selection = TextSelection.collapsed(
-                        offset: controller.apiKeyController.value.length,
-                      ),
-                onChanged: (value) => controller.apiKeyController.value = value,
-                obscureText: true,
-                style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                decoration: InputDecoration(
-                  labelText: 'API Key *',
-                  labelStyle: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                  ),
-                  hintText: 'Enter your API key',
-                  hintStyle: TextStyle(
-                    color: AppColors.getTextTertiary(isDark),
-                  ),
-                  prefixIcon: Icon(
-                    Iconsax.key,
-                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                  ),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.darkSurfaceVariant
-                      : Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.getDivider(isDark)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
+            SizedBox(height: 12),
+            _buildDataTypeRow(
+              'Customers',
+              'Contact info, purchase history',
+              Iconsax.user,
+              Colors.purple,
+              isDark,
             ),
-            SizedBox(height: 24),
-            Obx(
-              () => SwitchListTile(
-                value: controller.autoSync.value,
-                onChanged: (value) => controller.autoSync.value = value,
-                activeColor: isDark ? AppColors.darkPrimary : AppColors.primary,
-                title: Text(
-                  'Auto Sync',
-                  style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                ),
-                subtitle: Text(
-                  'Automatically sync data at intervals',
-                  style: TextStyle(color: AppColors.getTextSecondary(isDark)),
-                ),
-              ),
+            SizedBox(height: 12),
+            _buildDataTypeRow(
+              'Wallet',
+              'Business wallet balance',
+              Iconsax.wallet,
+              Colors.orange,
+              isDark,
             ),
-            Obx(() {
-              if (controller.autoSync.value) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 16),
-                    Text(
-                      'Sync Interval: ${controller.syncInterval.value} minutes',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.getTextPrimary(isDark),
-                      ),
-                    ),
-                    Slider(
-                      value: controller.syncInterval.value.toDouble(),
-                      min: 5,
-                      max: 60,
-                      divisions: 11,
-                      label: '${controller.syncInterval.value} min',
-                      activeColor: isDark
-                          ? AppColors.darkPrimary
-                          : AppColors.primary,
-                      onChanged: (value) =>
-                          controller.syncInterval.value = value.toInt(),
-                    ),
-                  ],
-                );
-              }
-              return SizedBox.shrink();
-            }),
-            SizedBox(height: 16),
-            Obx(
-              () => SwitchListTile(
-                value: controller.syncOnlyWifi.value,
-                onChanged: (value) => controller.syncOnlyWifi.value = value,
-                activeColor: isDark ? AppColors.darkPrimary : AppColors.primary,
-                title: Text(
-                  'Sync Only on WiFi',
-                  style: TextStyle(color: AppColors.getTextPrimary(isDark)),
-                ),
-                subtitle: Text(
-                  'Prevent mobile data usage',
-                  style: TextStyle(color: AppColors.getTextSecondary(isDark)),
-                ),
-              ),
+            SizedBox(height: 12),
+            _buildDataTypeRow(
+              'Subscriptions',
+              'Plan and billing info',
+              Iconsax.crown,
+              Colors.amber,
+              isDark,
             ),
-            SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() {
-                    return OutlinedButton.icon(
-                      onPressed: controller.isTesting.value
-                          ? null
-                          : () => controller.testConnection(),
-                      icon: controller.isTesting.value
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(Iconsax.link),
-                      label: Text('Test Connection'),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: AppColors.getDivider(isDark)),
-                        foregroundColor: AppColors.getTextPrimary(isDark),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => controller.saveConfiguration(),
-                    icon: Icon(Iconsax.tick_circle),
-                    label: Text('Save Config'),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: isDark
-                          ? AppColors.darkPrimary
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            SizedBox(height: 12),
+            _buildDataTypeRow(
+              'Settings',
+              'Store configuration',
+              Iconsax.setting_2,
+              Colors.teal,
+              isDark,
             ),
           ],
         ),
@@ -600,106 +486,65 @@ class SyncSettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildSyncStatsCard(SyncController controller, bool isDark) {
-    return Card(
-      color: AppColors.getSurfaceColor(isDark),
-      elevation: isDark ? 8 : 2,
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _buildDataTypeRow(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    bool isDark,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(isDark ? 0.15 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Iconsax.chart,
-                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                ),
-                SizedBox(width: 12),
                 Text(
-                  'Sync Statistics',
+                  title,
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.getTextPrimary(isDark),
                   ),
                 ),
+                SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.getTextSecondary(isDark),
+                  ),
+                ),
               ],
             ),
-            SizedBox(height: 24),
-            Obx(() {
-              final stats = controller.stats;
-              return Row(
-                children: [
-                  Expanded(
-                    child: _buildStatTile(
-                      'Pending',
-                      stats.totalPending.toString(),
-                      Iconsax.timer_1,
-                      Colors.orange,
-                      isDark,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatTile(
-                      'Synced',
-                      stats.totalSynced.toString(),
-                      Iconsax.tick_circle,
-                      Colors.green,
-                      isDark,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatTile(
-                      'Failed',
-                      stats.totalFailed.toString(),
-                      Iconsax.close_circle,
-                      Colors.red,
-                      isDark,
-                    ),
-                  ),
-                ],
-              );
-            }),
-            SizedBox(height: 16),
-            Obx(() {
-              final lastSync = controller.stats.lastSyncTime;
-              if (lastSync == null) {
-                return Text(
-                  'Never synced',
-                  style: TextStyle(
-                    color: AppColors.getTextSecondary(isDark),
-                    fontStyle: FontStyle.italic,
-                  ),
-                );
-              }
-
-              final diff = DateTime.now().difference(lastSync);
-              String timeAgo;
-              if (diff.inMinutes < 1) {
-                timeAgo = 'Just now';
-              } else if (diff.inHours < 1) {
-                timeAgo = '${diff.inMinutes} minutes ago';
-              } else if (diff.inDays < 1) {
-                timeAgo = '${diff.inHours} hours ago';
-              } else {
-                timeAgo = '${diff.inDays} days ago';
-              }
-
-              return Text(
-                'Last sync: $timeAgo',
-                style: TextStyle(color: AppColors.getTextSecondary(isDark)),
-              );
-            }),
-          ],
-        ),
+          ),
+          Icon(Iconsax.tick_circle5, color: Colors.green, size: 20),
+        ],
       ),
     );
   }
 
-  Widget _buildActionsCard(SyncController controller, bool isDark) {
+  Widget _buildActionsCard(
+    UniversalSyncController syncController,
+    FiredartSyncService firedartSync,
+    bool isDark,
+  ) {
     return Card(
       color: AppColors.getSurfaceColor(isDark),
       elevation: isDark ? 8 : 2,
@@ -729,9 +574,18 @@ class SyncSettingsView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => controller.syncNow(),
+                onPressed: () async {
+                  await syncController.performFullSync();
+                  Get.snackbar(
+                    'Sync Complete',
+                    'All data synced: Products, Transactions, Customers, Wallets, Subscriptions & Settings',
+                    backgroundColor: Colors.green,
+                    colorText: Colors.white,
+                    duration: Duration(seconds: 3),
+                  );
+                },
                 icon: Icon(Iconsax.refresh),
-                label: Text('Sync Now'),
+                label: Text('Sync All Data Now'),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: isDark
@@ -744,14 +598,33 @@ class SyncSettingsView extends StatelessWidget {
                 ),
               ),
             ),
+            SizedBox(height: 8),
+            Text(
+              'Syncs: Products, Transactions, Customers, Templates, Cashiers, Wallets, Subscriptions & Settings',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.getTextSecondary(isDark),
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
             SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => controller.retryFailed(),
-                    icon: Icon(Iconsax.refresh_2),
-                    label: Text('Retry Failed'),
+                    onPressed: () async {
+                      await syncController.forceSubscriptionSync();
+                      Get.snackbar(
+                        'Subscription Synced',
+                        'Subscription data refreshed',
+                        backgroundColor: Colors.blue,
+                        colorText: Colors.white,
+                        duration: Duration(seconds: 2),
+                      );
+                    },
+                    icon: Icon(Iconsax.crown),
+                    label: Text('Sync Subscription'),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: AppColors.getDivider(isDark)),
@@ -765,9 +638,18 @@ class SyncSettingsView extends StatelessWidget {
                 SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => controller.cleanup(),
-                    icon: Icon(Iconsax.trash),
-                    label: Text('Cleanup'),
+                    onPressed: () async {
+                      await syncController.syncBusinessSettingsNow();
+                      Get.snackbar(
+                        'Settings Synced',
+                        'Business settings refreshed',
+                        backgroundColor: Colors.teal,
+                        colorText: Colors.white,
+                        duration: Duration(seconds: 2),
+                      );
+                    },
+                    icon: Icon(Iconsax.setting_2),
+                    label: Text('Sync Settings'),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: AppColors.getDivider(isDark)),
@@ -780,46 +662,202 @@ class SyncSettingsView extends StatelessWidget {
                 ),
               ],
             ),
+            SizedBox(height: 16),
+            Obx(() {
+              final syncQueue = firedartSync.syncQueue;
+              if (syncQueue.isNotEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Iconsax.timer, size: 20, color: Colors.orange),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${syncQueue.length} item${syncQueue.length > 1 ? "s" : ""} in offline queue',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.getTextPrimary(isDark),
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              'Will sync when connection is restored',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.getTextSecondary(isDark),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatTile(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    bool isDark,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.getTextPrimary(isDark),
+  Widget _buildInfoCard(bool isDark) {
+    return Card(
+      color: AppColors.getSurfaceColor(isDark),
+      elevation: isDark ? 8 : 2,
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Iconsax.information,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'About Cloud Sync',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(isDark),
+                  ),
+                ),
+              ],
             ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.getTextSecondary(isDark),
+            SizedBox(height: 16),
+            Text(
+              'Your data is automatically synchronized with Firebase Firestore in real-time. This ensures all your devices stay up-to-date with the latest information.',
+              style: TextStyle(
+                color: AppColors.getTextSecondary(isDark),
+                height: 1.5,
+              ),
             ),
-          ),
-        ],
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Iconsax.shield_tick, size: 20, color: Colors.green),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Secure & Reliable',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.getTextPrimary(isDark),
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Industry-standard encryption and backup',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Iconsax.flash_1, size: 20, color: Colors.blue),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Real-time Updates',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.getTextPrimary(isDark),
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Changes appear instantly on all devices',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Iconsax.wifi, size: 20, color: Colors.purple),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Offline Support',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.getTextPrimary(isDark),
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Work offline, sync automatically when back online',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.getTextSecondary(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -836,12 +874,15 @@ class SyncSettingsView extends StatelessWidget {
             fontSize: 14,
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            color: AppColors.getTextPrimary(isDark),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: AppColors.getTextPrimary(isDark),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -907,32 +948,32 @@ class SyncSettingsView extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildFeatureItem(
-                        'Transactions sync',
-                        'All sales data across devices',
+                        'Real-time Sync',
+                        'Data updates instantly across all devices',
                         isDark,
                       ),
                       SizedBox(height: 16),
                       _buildFeatureItem(
-                        'Products & Inventory',
-                        'Stock levels updated everywhere',
-                        isDark,
-                      ),
-                      SizedBox(height: 16),
-                      _buildFeatureItem(
-                        'Customer data',
-                        'Centralized customer database',
-                        isDark,
-                      ),
-                      SizedBox(height: 16),
-                      _buildFeatureItem(
-                        'Automatic sync',
-                        'Background updates every few minutes',
-                        isDark,
-                      ),
-                      SizedBox(height: 16),
-                      _buildFeatureItem(
-                        'Cloud backup',
+                        'Cloud Backup',
                         'Never lose your business data',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Multi-device Access',
+                        'Work seamlessly from any device',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Offline Support',
+                        'Syncs automatically when back online',
+                        isDark,
+                      ),
+                      SizedBox(height: 16),
+                      _buildFeatureItem(
+                        'Secure Storage',
+                        'Enterprise-grade security',
                         isDark,
                       ),
                     ],
@@ -943,10 +984,7 @@ class SyncSettingsView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {
-                          // Go back or close
-                          Get.back();
-                        },
+                        onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           side: BorderSide(
@@ -975,22 +1013,8 @@ class SyncSettingsView extends StatelessWidget {
                       flex: 2,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Navigate to subscription tab (index 3)
-                          final tabController =
-                              Get.context!
-                                      .findAncestorStateOfType<
-                                        State<StatefulWidget>
-                                      >()
-                                      ?.widget
-                                  as dynamic;
-                          if (tabController != null) {
-                            try {
-                              (tabController as dynamic)._tabController
-                                  ?.animateTo(3);
-                            } catch (e) {
-                              print('Could not switch tab: $e');
-                            }
-                          }
+                          // Navigate to subscription view
+                          Get.toNamed('/settings/subscription');
                         },
                         icon: Icon(Iconsax.crown_1, size: 20),
                         label: Text(

@@ -5,6 +5,7 @@ import '../../controllers/cart_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/customer_controller.dart';
 import '../../controllers/appearance_controller.dart';
+import '../../controllers/business_settings_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../utils/responsive.dart';
@@ -51,9 +52,11 @@ class TransactionsView extends StatelessWidget {
                             : AppColors.primary,
                         tabs: [
                           Tab(icon: Icon(Iconsax.shop), text: 'Products'),
-                          Tab(
-                            icon: Icon(Iconsax.shopping_cart),
-                            text: 'Cart (${cartController.cartItems.length})',
+                          Obx(
+                            () => Tab(
+                              icon: Icon(Iconsax.shopping_cart),
+                              text: 'Cart (${cartController.cartItems.length})',
+                            ),
                           ),
                         ],
                       ),
@@ -843,14 +846,27 @@ class TransactionsView extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 8),
-                Obx(
-                  () => _buildSummaryRow(
-                    'Tax (8%)',
-                    CurrencyFormatter.format(cartController.tax),
-                    isDark,
-                  ),
-                ),
-                SizedBox(height: 8),
+                Obx(() {
+                  final settings = Get.find<BusinessSettingsController>();
+                  // Recalculate tax inside Obx for reactivity
+                  final taxAmount = settings.taxEnabled.value
+                      ? cartController.subtotal * (settings.taxRate.value / 100)
+                      : 0.0;
+
+                  if (settings.taxEnabled.value && taxAmount > 0) {
+                    return Column(
+                      children: [
+                        _buildSummaryRow(
+                          '${settings.taxName.value} (${settings.taxRate.value.toStringAsFixed(1)}%)',
+                          CurrencyFormatter.format(taxAmount),
+                          isDark,
+                        ),
+                        SizedBox(height: 8),
+                      ],
+                    );
+                  }
+                  return SizedBox();
+                }),
                 Obx(
                   () => _buildSummaryRow(
                     'Discount',
@@ -859,14 +875,24 @@ class TransactionsView extends StatelessWidget {
                   ),
                 ),
                 Divider(height: 24, color: AppColors.getDivider(isDark)),
-                Obx(
-                  () => _buildSummaryRow(
+                Obx(() {
+                  final settings = Get.find<BusinessSettingsController>();
+                  // Recalculate tax inside Obx for reactivity
+                  final taxAmount = settings.taxEnabled.value
+                      ? cartController.subtotal * (settings.taxRate.value / 100)
+                      : 0.0;
+                  final totalAmount =
+                      cartController.subtotal +
+                      taxAmount -
+                      cartController.discount.value;
+
+                  return _buildSummaryRow(
                     'Total',
-                    CurrencyFormatter.format(cartController.total),
+                    CurrencyFormatter.format(totalAmount),
                     isDark,
                     large: true,
-                  ),
-                ),
+                  );
+                }),
                 SizedBox(height: 16),
                 Row(
                   children: [

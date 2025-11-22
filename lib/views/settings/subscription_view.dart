@@ -8,6 +8,7 @@ import '../../models/unresolved_transaction_model.dart';
 import '../../services/subscription_service.dart';
 import '../../controllers/appearance_controller.dart';
 import '../../controllers/business_settings_controller.dart';
+import '../../controllers/universal_sync_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/responsive.dart';
 import 'package:intl/intl.dart';
@@ -300,6 +301,86 @@ class _SubscriptionViewState extends State<SubscriptionView> {
                   ),
                 ],
               ),
+            ),
+            // Manual sync button for debugging subscription issues
+            IconButton(
+              onPressed: () async {
+                try {
+                  Get.dialog(
+                    Center(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text('Syncing subscription...'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    barrierDismissible: false,
+                  );
+
+                  final subscriptionService = Get.find<SubscriptionService>();
+                  final universalSync = Get.find<UniversalSyncController>();
+
+                  print('🔍 === MANUAL SYNC DEBUG ===');
+                  print(
+                    'Current subscription: ${subscriptionService.currentSubscription.value?.planName ?? "NULL"}',
+                  );
+                  print(
+                    'Status: ${subscriptionService.currentSubscription.value?.status.name ?? "N/A"}',
+                  );
+                  print(
+                    'Business ID: ${subscriptionService.currentSubscription.value?.businessId ?? "N/A"}',
+                  );
+
+                  // Push current subscription to cloud
+                  if (subscriptionService.currentSubscription.value != null) {
+                    print('📤 Pushing subscription to cloud...');
+                    await universalSync.syncSubscription(
+                      subscriptionService.currentSubscription.value!,
+                    );
+                    print('✅ Push complete');
+                  } else {
+                    print('❌ No local subscription to push!');
+                  }
+
+                  print('⏳ Waiting 2 seconds...');
+                  await Future.delayed(Duration(seconds: 2));
+
+                  // Then pull from cloud to sync
+                  print('📥 Pulling from cloud...');
+                  await universalSync.forceSubscriptionSync();
+                  Get.back(); // Close loading dialog
+
+                  Get.snackbar(
+                    '✅ Sync Complete',
+                    'Subscription synced successfully',
+                    backgroundColor: Colors.green,
+                    colorText: Colors.white,
+                    duration: Duration(seconds: 3),
+                  );
+                } catch (e) {
+                  Get.back(); // Close loading dialog
+                  Get.snackbar(
+                    '❌ Sync Failed',
+                    'Error: $e',
+                    backgroundColor: Colors.red,
+                    colorText: Colors.white,
+                    duration: Duration(seconds: 5),
+                  );
+                }
+              },
+              icon: Icon(
+                Iconsax.refresh,
+                color: AppColors.getTextSecondary(isDark),
+              ),
+              tooltip: 'Sync Subscription',
             ),
           ],
         ),

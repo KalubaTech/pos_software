@@ -5,6 +5,7 @@ import '../models/transaction_model.dart';
 import '../models/receipt_model.dart';
 import '../services/database_service.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/business_settings_controller.dart';
 import '../services/printer_service.dart';
 
 class CartController extends GetxController {
@@ -19,7 +20,20 @@ class CartController extends GetxController {
 
   double get subtotal =>
       cartItems.fold(0.0, (sum, item) => sum + item.subtotal);
-  double get tax => subtotal * 0.08; // 8% tax
+
+  double get tax {
+    try {
+      final settings = Get.find<BusinessSettingsController>();
+      if (settings.taxEnabled.value) {
+        return subtotal * (settings.taxRate.value / 100);
+      }
+      return 0.0;
+    } catch (e) {
+      // Fallback to 0% tax if settings not found
+      return 0.0;
+    }
+  }
+
   double get total => subtotal + tax - discount.value;
   int get itemCount => cartItems.fold(0, (sum, item) => sum + item.quantity);
 

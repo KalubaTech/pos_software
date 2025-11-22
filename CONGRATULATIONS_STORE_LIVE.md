@@ -73,7 +73,7 @@ Check these metrics in Partner Center:
 
 ---
 
-## 🔄 Managing Updates
+## 🔄 Managing Updates 
 
 ### Option 1: Instant Updates (Shorebird - Recommended for Minor Updates)
 

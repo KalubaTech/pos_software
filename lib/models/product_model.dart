@@ -95,6 +95,7 @@ class ProductModel {
   final bool trackInventory; // Whether to track inventory for this product
   final DateTime? lastRestocked; // Last time inventory was updated
   final double? costPrice; // Cost price for profit calculation
+  final bool listedOnline; // Whether product is listed on online store
 
   ProductModel({
     required this.id,
@@ -116,6 +117,7 @@ class ProductModel {
     this.trackInventory = true,
     this.lastRestocked,
     this.costPrice,
+    this.listedOnline = false,
   });
 
   // Check if product is low on stock
@@ -182,6 +184,7 @@ class ProductModel {
           ? DateTime.parse(json['lastRestocked'])
           : null,
       costPrice: json['costPrice']?.toDouble(),
+      listedOnline: json['listedOnline'] ?? false,
     );
   }
 
@@ -206,6 +209,7 @@ class ProductModel {
       'trackInventory': trackInventory,
       'lastRestocked': lastRestocked?.toIso8601String(),
       'costPrice': costPrice,
+      'listedOnline': listedOnline,
     };
   }
 
@@ -229,6 +233,7 @@ class ProductModel {
     bool? trackInventory,
     DateTime? lastRestocked,
     double? costPrice,
+    bool? listedOnline,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -250,6 +255,7 @@ class ProductModel {
       trackInventory: trackInventory ?? this.trackInventory,
       lastRestocked: lastRestocked ?? this.lastRestocked,
       costPrice: costPrice ?? this.costPrice,
+      listedOnline: listedOnline ?? this.listedOnline,
     );
   }
 }
